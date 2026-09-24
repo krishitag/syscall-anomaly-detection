@@ -1,0 +1,5 @@
+{
+    "threshold": 0.0015323079423978925,
+    "percentile": 95.0,
+    "description": "Threshold calculated from normal validation reconstruction errors."
+}
