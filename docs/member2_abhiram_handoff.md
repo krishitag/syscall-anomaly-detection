@@ -55,24 +55,43 @@ The 74 feature positions always follow `member2.schema.FEATURE_COLUMNS`:
 2. 50 syscall-pair/bigram count columns
 3. 4 aggregate-statistic columns
 
-The names currently in `member2/schema.py` are placeholders. The team must
-replace the four schema column lists with Naman's agreed real vocabulary and
-stat definitions before interpreting a model feature by name. The matrix shape
-and the handoff interface remain `(n_rows, 74)`.
+The names in `member2/schema.py` are placeholders. To interpret a feature
+by name, look it up in [VOCAB.md](VOCAB.md). The matrix shape and the handoff
+interface remain `(n_rows, 74)`.
 
-Pending team decisions that Member 2 does not infer:
+In current real data, only the 20 syscall columns and `stat_04` vary. The 50
+pair columns and `stat_01`–`stat_03` are always 0, so use a scaler that
+handles zero variance.
 
-- Real syscall and pair feature names/order
-- Definitions and valid ranges of the four statistics
-- `cgroup_id` representation
-- Timestamp clock/epoch basis
+Still open: the index-to-pair mapping for the 50 pair columns (Naman).
+
+## Live scoring, one window at a time
+
+`member2.pipeline.prepare_window(row)` takes one 77-column row as a dict
+(`dict(zip(schema.ALL_COLUMNS, values))`) and returns its 74-feature vector.
+It applies the same checks and column order as `prepare_aggregated_csv`, so
+the vector matches the corresponding row of `X`.
 
 ## Labels and results
 
-Normal Naman deliveries have exactly 77 columns and no label. If a future
-evaluation dataset has one additional label column, Member 2's
-`separate_evaluation_labels` utility removes a caller-specified label column
-before the normal 77-column path. Its label vector remains separate from `X`.
+Normal Naman deliveries have exactly 77 columns and no label. For
+evaluation, Naman provides `eval.csv` (77 columns) and `attack_log.csv`
+(`attack,start_ns,end_ns`). Member 2 turns them into features and labels:
+
+```python
+from member2.evaluation_labels import prepare_labeled_evaluation
+
+labeled = prepare_labeled_evaluation("data/eval.csv", "data/attack_log.csv")
+X_eval, y_eval = labeled.prepared.X, labeled.y   # y: 1 = window overlaps an attack
+```
+
+A window is labelled 1 if it overlaps any attack interval. An attack that
+straddles a window boundary labels both windows. Use `eval.csv` only for
+scoring: never fit the scaler or set the threshold on it.
+
+If an evaluation CSV instead carries one extra label column, use
+`separate_evaluation_labels`, which removes it before the normal 77-column
+path. Either way, labels stay separate from `X`.
 
 Abhiram owns the autoencoder, reconstruction error, threshold selection,
 normal/anomaly classification, and evaluation. Member 2 does not produce or

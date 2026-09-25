@@ -4,11 +4,12 @@ This is a Task 4 development fixture only.  Each emitted row already
 represents one container over one closed window; this module neither accepts
 nor derives data from individual syscall events.
 
-Temporary conventions pending Naman's decisions:
-  * ``cgroup_id`` is a numeric placeholder (1000, 1001, ...).
-  * timestamps are synthetic nanoseconds from an arbitrary fixed origin;
-    they do not claim a real clock or epoch basis.
-  * the four undefined statistic columns are emitted as numeric zeroes.
+Test-fixture conventions (real data comes from ``ebpf/tracer.py``):
+  * ``cgroup_id`` is a small int64 (1000, 1001, ...), matching the real type.
+  * timestamps are synthetic nanoseconds from an arbitrary fixed origin,
+    not real Unix-epoch times.
+  * the four statistic columns are emitted as zeroes, which is within every
+    statistic's valid range.
 
 Feature column names and ordering always come from :mod:`member2.schema`, so
 the generator follows the eventual agreed vocabulary automatically.

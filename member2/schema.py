@@ -1,22 +1,20 @@
 """
 Feature schema contract for the syscall anomaly detection pipeline.
 
-STATUS: PLACEHOLDER NAMES.
+STATUS: PLACEHOLDER NAMES, DEFINED MEANINGS.
 
 The column GROUPING and COUNTS below (20 syscall counts + 50 pair counts +
 4 aggregate stats = 74 feature columns, plus 3 metadata columns = 77 total)
 are fixed per the team's agreed architecture.
 
-The actual NAMES are not yet finalized -- they depend on:
-  - which 20 syscalls Naman's eBPF program tracks
-  - which 50 syscall pairs Naman's eBPF program tracks
-  - what the 4 aggregate statistics are defined to be
+The names stay as placeholders; docs/VOCAB.md defines what each one means
+(which syscall family each syscall_NN_count counts, and the 4 statistics).
+Only the index-to-pair mapping for pair_NN_count is still open.
 
-Do not invent real names here. Once the team finalizes them, update the four
-lists below (SYSCALL_COUNT_COLUMNS, PAIR_COUNT_COLUMNS, STAT_COLUMNS,
-METADATA_COLUMNS) in place. Every downstream module (loader, validator,
-mapper) imports column lists from this file rather than hardcoding names, so
-that update should not require changes anywhere else.
+If the team renames columns to readable names, update the four lists below
+in place. Every downstream module (loader, validator, mapper) and Naman's
+ebpf/tracer.py import column lists from this file rather than hardcoding
+names, so that update should not require changes anywhere else.
 """
 
 # --- Metadata columns (kept separately, NOT fed to the autoencoder) ---
@@ -28,13 +26,13 @@ METADATA_COLUMNS = [
 
 # --- Feature columns (fed to the autoencoder, in this exact order) ---
 
-# 20 syscall / unigram count features. PLACEHOLDER NAMES.
+# 20 syscall / unigram count features. Meanings: docs/VOCAB.md section 4.
 SYSCALL_COUNT_COLUMNS = [f"syscall_{i:02d}_count" for i in range(1, 21)]
 
-# 50 syscall-pair / bigram count features. PLACEHOLDER NAMES.
+# 50 syscall-pair / bigram count features. Mapping still open (VOCAB.md section 5).
 PAIR_COUNT_COLUMNS = [f"pair_{i:02d}_count" for i in range(1, 51)]
 
-# 4 aggregate statistics. PLACEHOLDER NAMES.
+# 4 aggregate statistics. Definitions: docs/VOCAB.md section 3.
 STAT_COLUMNS = [f"stat_{i:02d}" for i in range(1, 5)]
 
 # The 74 columns handed to Abhiram's autoencoder, in fixed order.

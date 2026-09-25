@@ -57,24 +57,21 @@ honor what's written here.
 
 | Column | Meaning | Expected dtype |
 |---|---|---|
-| `cgroup_id` | Identifier of the container/cgroup the row belongs to | integer or string (exact type TBD — see dependency below) |
+| `cgroup_id` | Identifier of the container/cgroup the row belongs to (cgroup v2 inode number) | integer (int64) |
 | `window_start_ns` | Start of the aggregation window, nanoseconds since an agreed epoch | integer (int64) |
 | `window_end_ns` | End of the aggregation window, nanoseconds since the same epoch | integer (int64) |
 
 Constraints:
 - `window_end_ns > window_start_ns` strictly, for every row.
-- Both timestamps use the same clock/epoch for every row in the file
-  (e.g., consistently `CLOCK_MONOTONIC` boot time, or consistently
-  epoch-based — **which one is a pending decision from Naman**, tracked as
-  a dependency below).
+- Both timestamps use the same clock for every row in the file: Unix-epoch
+  nanoseconds from `time.time_ns()`.
 - Metadata columns are carried alongside the model input as context but are
   **never** passed to the autoencoder.
 
-**Open dependency (Naman):** the exact type/format of `cgroup_id` (numeric
-cgroup inode ID vs. a string container name/hash) and the clock/epoch basis
-for the two `*_ns` fields are not yet confirmed. Do not assume either until
-Naman specifies it — the mock CSV generator (Task 4+) will pick a
-placeholder convention and flag it as such.
+**Resolved (Naman, [VOCAB.md](VOCAB.md) §1–2):** `cgroup_id` is the numeric
+cgroup v2 inode ID from `bpf_get_current_cgroup_id()`, written as int64. It
+changes when a container restarts. Both `*_ns` fields are Unix-epoch
+nanoseconds.
 
 ## 5. Feature columns (74 total)
 
@@ -84,16 +81,23 @@ Per the agreed architecture (not yet agreed: the names):
 |---|---|---|
 | Syscall / unigram counts | 20 | non-negative integer (int64) |
 | Syscall-pair / bigram counts | 50 | non-negative integer (int64) |
-| Aggregate statistics | 4 | numeric — integer or float, **pending definition** |
+| Aggregate statistics | 4 | see table below |
+
+The 4 statistics, as defined in [VOCAB.md](VOCAB.md) §3:
+
+| Column | Meaning | Type | Valid range |
+|---|---|---|---|
+| `stat_01` | Mean inter-arrival time between consecutive syscalls in the window, in ns | float | `>= 0.0` |
+| `stat_02` | Standard deviation (not variance) of the same inter-arrival times, in ns | float | `>= 0.0` |
+| `stat_03` | Count of syscalls in the window that returned an error | int | `>= 0` |
+| `stat_04` | Number of distinct syscalls from the 20-syscall vocabulary seen in the window | int | `0 <= x <= 20` |
 
 Constraints:
 - Count columns (unigram + bigram, 70 of the 74) must be non-negative
   integers. A negative count is invalid input.
-- The 4 aggregate-statistic columns' valid ranges/types cannot be
-  constrained yet because their definitions are undefined — this is an
-  **open dependency (Naman/Abhiram)**. Once defined (e.g., mean syscall
-  duration, unique-syscall ratio, etc.), this section should be updated
-  with real constraints (e.g., ratios in `[0, 1]`, non-negative durations).
+- The 4 aggregate-statistic columns must fall within the ranges above.
+  When a window has fewer than two syscalls, `stat_01` and `stat_02` are
+  written as `0.0`, never blank.
 - No column in the 74 feature columns may contain nulls/NaN/empty string in
   a well-formed row. A missing value for a given window means that
   window's count is genuinely zero and should be written as `0`, not left
@@ -120,20 +124,21 @@ implement enforcement.
 - How Naman's eBPF program computes counts or picks window boundaries —
   that's entirely inside Member 1's scope and out of bounds for this
   document.
-- Labels for anomaly evaluation datasets — if/when a labeled evaluation CSV
-  exists, it is expected to carry an additional label column beyond these
-  77, kept separate from the 74 model features (see Member 2 responsibility
-  #9). Not otherwise specified here since no labeled dataset exists yet.
+- Labels for anomaly evaluation datasets. The evaluation CSV uses these same
+  77 columns; labels come from a separate `attack_log.csv`
+  (`attack,start_ns,end_ns`, same Unix-epoch ns clock), and
+  `member2.evaluation_labels.prepare_labeled_evaluation` joins the two.
 
 ## Open dependencies tracked in this document
 
-- [ ] Real syscall/pair/stat column names and order (Naman + Abhiram).
-- [ ] Definition and valid range of each of the 4 aggregate statistics
-      (Naman/Abhiram).
-- [ ] `cgroup_id` representation: numeric vs. string.
-- [ ] Clock/epoch basis for `window_start_ns` / `window_end_ns`.
+- [x] Meaning and order of the 20 syscall columns — locked in
+      [VOCAB.md](VOCAB.md) §4. Column names in `schema.py` stay as placeholders.
+- [ ] Index-to-pair mapping for the 50 pair columns (Naman) — deferred per
+      [VOCAB.md](VOCAB.md) §5. Pair columns are all 0 until then.
+- [x] Definition and valid range of each of the 4 aggregate statistics —
+      [VOCAB.md](VOCAB.md) §3 (see §5 above).
+- [x] `cgroup_id` representation: numeric (int64 cgroup inode ID).
+- [x] Clock/epoch basis for `window_start_ns` / `window_end_ns`: Unix-epoch ns.
 
-Until these are resolved, the mock CSV generator (upcoming task) will
-adopt explicit, clearly-labeled placeholder conventions consistent with
-this contract, so the pipeline can be built and tested end-to-end now and
-re-pointed at Naman's real CSV later without code changes.
+Naman's real CSV (`data/normal.csv`, 628 rows) passes this pipeline without
+code changes. The mock CSV generator is kept for tests only.
