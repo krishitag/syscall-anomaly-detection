@@ -4,7 +4,7 @@ Defined in [`member2/schema.py`](../member2/schema.py). This is the single
 source of truth for column names and order — every later Member 2 module
 (loader, validator, mapper) imports from it instead of hardcoding names.
 
-## Status: placeholder names, confirmed structure
+## Status: placeholder names, defined meanings
 
 The structure is fixed by the team's agreed architecture:
 
@@ -17,20 +17,20 @@ The structure is fixed by the team's agreed architecture:
 | **Total feature columns -> Abhiram** | **74** | |
 | **Total columns in Naman's CSV** | **77** | |
 
-The actual names (`syscall_01_count`, `pair_07_count`, `stat_02`, etc.) are
-**placeholders**. They are not invented feature definitions — they exist only
-so the pipeline can be built and tested end-to-end before the real
-vocabulary is available.
+The names (`syscall_01_count`, `pair_07_count`, `stat_02`, etc.) are still
+**placeholders**, but [VOCAB.md](VOCAB.md) now defines what each one means:
 
-## Unresolved, pending the team
+- **Syscall columns:** the 20-syscall vocabulary and its order are locked
+  (VOCAB.md §4). Each column counts a family of equivalent syscalls.
+- **Statistics:** all 4 are defined, with valid ranges (VOCAB.md §3).
+  `validate_aggregated_csv` enforces those ranges.
+- **Pair columns:** the index-to-pair mapping is still open (VOCAB.md §5).
+  Naman's tracer writes 0 for all 50 until bigram counting is added.
 
-- The exact 20 syscalls Naman's eBPF program counts.
-- The exact 50 syscall pairs Naman's eBPF program counts.
-- The exact definition of each of the 4 aggregate statistics.
+## Renaming to readable names (optional)
 
-## Update procedure once finalized
-
-Edit the four column lists at the top of `member2/schema.py` in place, in
-the same fixed order the team agrees on. No other file should need to
-change — loader, validator, and mapper all consume `FEATURE_COLUMNS`,
-`METADATA_COLUMNS`, and `ALL_COLUMNS` from this module.
+Readable names are needed before the report, where `pair_37_count` is not a
+usable label. To rename, edit the four column lists at the top of
+`member2/schema.py` in place. Naman's `ebpf/tracer.py` writes its header from
+the same lists, so both sides stay in sync. No other Member 2 file should need
+to change.

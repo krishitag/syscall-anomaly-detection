@@ -8,6 +8,7 @@ or create model input.
 from __future__ import annotations
 
 from collections import Counter
+from collections.abc import Mapping
 from decimal import Decimal, InvalidOperation
 import re
 
@@ -25,6 +26,11 @@ _INTEGER_PATTERN = re.compile(r"[+-]?\d+\Z")
 _INT64_MIN = -(2**63)
 _INT64_MAX = 2**63 - 1
 _COUNT_COLUMNS = SYSCALL_COUNT_COLUMNS + PAIR_COUNT_COLUMNS
+
+# Statistic definitions from docs/VOCAB.md section 3.
+_NON_NEGATIVE_FLOAT_STATS = STAT_COLUMNS[:2]  # mean / std of inter-arrival ns
+_ERROR_COUNT_STAT = STAT_COLUMNS[2]
+_DISTINCT_SYSCALLS_STAT = STAT_COLUMNS[3]
 
 
 class CsvContractError(ValueError):
@@ -49,11 +55,12 @@ def _parse_int64(value: str) -> int | None:
     return parsed
 
 
-def _is_finite_number(value: str) -> bool:
+def _parse_finite_number(value: str) -> Decimal | None:
     try:
-        return Decimal(value).is_finite()
+        parsed = Decimal(value)
     except InvalidOperation:
-        return False
+        return None
+    return parsed if parsed.is_finite() else None
 
 
 def _header_errors(header: tuple[str, ...]) -> list[str]:
@@ -77,12 +84,56 @@ def _header_errors(header: tuple[str, ...]) -> list[str]:
     return errors
 
 
+def _row_errors(values: Mapping[str, str], where: str) -> list[str]:
+    """Return every contract violation in one row whose header is already valid."""
+    errors: list[str] = []
+
+    missing_columns = [column for column in ALL_COLUMNS if _is_missing(values[column])]
+    if missing_columns:
+        errors.append(f"{where}: blank or NaN value(s) in {', '.join(missing_columns)}")
+
+    cgroup_id = _parse_int64(values[METADATA_COLUMNS[0]])
+    if cgroup_id is None or cgroup_id < 0:
+        errors.append(f"{where}: cgroup_id must be a non-negative int64")
+
+    start_ns = _parse_int64(values[METADATA_COLUMNS[1]])
+    end_ns = _parse_int64(values[METADATA_COLUMNS[2]])
+    if start_ns is None:
+        errors.append(f"{where}: window_start_ns must be an int64")
+    if end_ns is None:
+        errors.append(f"{where}: window_end_ns must be an int64")
+    if start_ns is not None and end_ns is not None and end_ns <= start_ns:
+        errors.append(f"{where}: window_end_ns must be greater than window_start_ns")
+
+    for column in _COUNT_COLUMNS:
+        parsed = _parse_int64(values[column])
+        if parsed is None or parsed < 0:
+            errors.append(f"{where}: {column} must be a non-negative int64 count")
+
+    for column in _NON_NEGATIVE_FLOAT_STATS:
+        parsed = _parse_finite_number(values[column])
+        if parsed is None or parsed < 0:
+            errors.append(f"{where}: {column} must be a finite number >= 0")
+
+    error_count = _parse_int64(values[_ERROR_COUNT_STAT])
+    if error_count is None or error_count < 0:
+        errors.append(f"{where}: {_ERROR_COUNT_STAT} must be a non-negative int64 count")
+
+    distinct = _parse_int64(values[_DISTINCT_SYSCALLS_STAT])
+    if distinct is None or not 0 <= distinct <= len(SYSCALL_COUNT_COLUMNS):
+        errors.append(
+            f"{where}: {_DISTINCT_SYSCALLS_STAT} must be an integer in "
+            f"[0, {len(SYSCALL_COUNT_COLUMNS)}]"
+        )
+
+    return errors
+
+
 def validate_aggregated_csv(loaded_csv: LoadedAggregatedCsv) -> None:
     """Raise :class:`CsvContractError` unless a loaded CSV meets the contract.
 
-    Valid input may use any header order.  Validation deliberately does not
-    impose a cgroup representation, timestamp clock/epoch, or statistic range:
-    those are documented open team dependencies.
+    Valid input may use any header order.  Metadata and statistic rules follow
+    the resolved definitions in ``docs/VOCAB.md``.
     """
     errors = _header_errors(loaded_csv.header)
     header_is_usable = not errors
@@ -91,7 +142,6 @@ def validate_aggregated_csv(loaded_csv: LoadedAggregatedCsv) -> None:
     # complete, unique version of the expected schema.
     indexes = {column: index for index, column in enumerate(loaded_csv.header)}
     seen_container_windows: set[tuple[str, str]] = set()
-    cgroup_value_kinds: set[str] = set()
 
     for row_index, row in enumerate(loaded_csv.rows, start=2):
         if len(row) != len(loaded_csv.header):
@@ -104,30 +154,10 @@ def validate_aggregated_csv(loaded_csv: LoadedAggregatedCsv) -> None:
             continue
 
         values = {column: row[index] for column, index in indexes.items()}
-
-        missing_columns = [column for column in ALL_COLUMNS if _is_missing(values[column])]
-        if missing_columns:
-            errors.append(
-                f"row {row_index}: blank or NaN value(s) in {', '.join(missing_columns)}"
-            )
+        errors.extend(_row_errors(values, f"row {row_index}"))
 
         cgroup_id = values[METADATA_COLUMNS[0]]
-        if not _is_missing(cgroup_id):
-            cgroup_value_kinds.add(
-                "integer" if _parse_int64(cgroup_id) is not None else "string"
-            )
-
-        start_value = values[METADATA_COLUMNS[1]]
-        end_value = values[METADATA_COLUMNS[2]]
-        start_ns = _parse_int64(start_value)
-        end_ns = _parse_int64(end_value)
-        if start_ns is None:
-            errors.append(f"row {row_index}: window_start_ns must be an int64")
-        if end_ns is None:
-            errors.append(f"row {row_index}: window_end_ns must be an int64")
-        if start_ns is not None and end_ns is not None and end_ns <= start_ns:
-            errors.append(f"row {row_index}: window_end_ns must be greater than window_start_ns")
-
+        start_ns = _parse_int64(values[METADATA_COLUMNS[1]])
         if not _is_missing(cgroup_id) and start_ns is not None:
             container_window = (cgroup_id, str(start_ns))
             if container_window in seen_container_windows:
@@ -136,21 +166,19 @@ def validate_aggregated_csv(loaded_csv: LoadedAggregatedCsv) -> None:
                 )
             seen_container_windows.add(container_window)
 
-        for column in _COUNT_COLUMNS:
-            value = values[column]
-            parsed = _parse_int64(value)
-            if parsed is None or parsed < 0:
-                errors.append(
-                    f"row {row_index}: {column} must be a non-negative int64 count"
-                )
+    if errors:
+        raise CsvContractError(errors)
 
-        for column in STAT_COLUMNS:
-            value = values[column]
-            if not _is_finite_number(value):
-                errors.append(f"row {row_index}: {column} must be a finite numeric value")
 
-    if len(cgroup_value_kinds) > 1:
-        errors.append("cgroup_id values must use one consistent type (integer or string)")
+def validate_window_row(row: Mapping[str, str]) -> None:
+    """Raise :class:`CsvContractError` unless one live window row meets the contract.
 
+    ``row`` maps each of the 77 column names to its raw text value, as one line
+    of Naman's CSV would.  Duplicate-window checks need the whole file and are
+    left to :func:`validate_aggregated_csv`.
+    """
+    errors = _header_errors(tuple(row))
+    if not errors:
+        errors = _row_errors(row, "window row")
     if errors:
         raise CsvContractError(errors)
