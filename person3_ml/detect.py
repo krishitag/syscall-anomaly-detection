@@ -10,12 +10,17 @@ The detector:
       -> reconstruction error
       -> anomaly threshold
       -> NORMAL / ANOMALY
+
+For the live demo, ``score_window`` scores one 74-feature vector from
+``member2.pipeline.prepare_window`` and ``anomaly_threshold`` gives the
+cut-off.  Both load the saved artifacts once and reuse them.
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+from functools import lru_cache
 from pathlib import Path
 
 import joblib
@@ -27,7 +32,7 @@ from member2.pipeline import prepare_aggregated_csv
 from .autoencoder import SyscallAutoencoder
 
 
-MODELS_DIR = Path("person3_ml/models")
+MODELS_DIR = Path(__file__).resolve().parent / "models"
 
 
 def load_artifacts():
@@ -65,13 +70,15 @@ def load_artifacts():
     return model, scaler, threshold
 
 
-def detect_anomalies(csv_path: str | Path):
+@lru_cache(maxsize=1)
+def _cached_artifacts():
+    """Load the artifacts once per process for window-by-window scoring."""
 
-    prepared = prepare_aggregated_csv(
-        csv_path
-    )
+    return load_artifacts()
 
-    X = prepared.X
+
+def reconstruction_errors(X: np.ndarray) -> np.ndarray:
+    """Return one reconstruction error per row of an (N, 74) feature matrix."""
 
     if X.ndim != 2 or X.shape[1] != 74:
         raise ValueError(
@@ -79,7 +86,7 @@ def detect_anomalies(csv_path: str | Path):
             f"(N, 74), got {X.shape}"
         )
 
-    model, scaler, threshold = load_artifacts()
+    model, scaler, _ = _cached_artifacts()
 
     X_scaled = scaler.transform(X)
 
@@ -90,7 +97,7 @@ def detect_anomalies(csv_path: str | Path):
 
     with torch.no_grad():
 
-        reconstruction_errors = (
+        return (
             model.reconstruction_error(
                 X_tensor,
                 reduction="none",
@@ -98,13 +105,48 @@ def detect_anomalies(csv_path: str | Path):
             .numpy()
         )
 
+
+def score_window(x: np.ndarray) -> float:
+    """Return the reconstruction error for one 74-feature window.
+
+    ``x`` is the vector from ``member2.pipeline.prepare_window``.  The window
+    is anomalous when the score is above ``anomaly_threshold()``.
+    """
+
+    x = np.asarray(x, dtype=np.float64)
+
+    if x.shape != (74,):
+        raise ValueError(
+            f"Expected one window with shape (74,), got {x.shape}"
+        )
+
+    return float(reconstruction_errors(x.reshape(1, 74))[0])
+
+
+def anomaly_threshold() -> float:
+    """Return the saved reconstruction-error threshold."""
+
+    _, _, threshold = _cached_artifacts()
+
+    return threshold
+
+
+def detect_anomalies(csv_path: str | Path):
+
+    prepared = prepare_aggregated_csv(
+        csv_path
+    )
+
+    errors = reconstruction_errors(prepared.X)
+    threshold = anomaly_threshold()
+
     predictions = (
-        reconstruction_errors > threshold
+        errors > threshold
     ).astype(int)
 
     return (
         prepared.metadata_rows,
-        reconstruction_errors,
+        errors,
         predictions,
         threshold,
     )
