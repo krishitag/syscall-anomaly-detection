@@ -1,0 +1,7 @@
+{"label": "tracer_off", "runs": 3, "requests_per_run": 3000, "rps_mean": 517.8119817775445, "rps_stdev": 24.1809249834453, "p50_mean": 1.4398790000692923, "p99_mean": 9.991481000004873}
+{"label": "tracer_on", "runs": 3, "requests_per_run": 3000, "rps_mean": 487.00255352784745, "rps_stdev": 39.630352684195294, "p50_mean": 1.5339519999694555, "p99_mean": 11.849746666712235}
+{"label": "naive_perevent", "runs": 3, "requests_per_run": 3000, "rps_mean": 133.6018701455971, "rps_stdev": 5.753733610206517, "p50_mean": 6.160997333305811, "p99_mean": 31.325798333303585}
+{"label": "tracer_off", "runs": 10, "requests_per_run": 3000, "rps_mean": 472.0023777039763, "rps_stdev": 67.57512094232641, "p50_mean": 1.6443785999399552, "p99_mean": 11.741992599991136}
+{"label": "tracer_on", "runs": 10, "requests_per_run": 3000, "rps_mean": 490.7001169277173, "rps_stdev": 50.96299820190254, "p50_mean": 1.5296939000108978, "p99_mean": 11.566165999988698}
+{"label": "naive_perevent", "runs": 10, "requests_per_run": 3000, "rps_mean": 1022.0186201118775, "rps_stdev": 69.86815777913272, "p50_mean": 0.8784513999898991, "p99_mean": 2.878686200028824}
+{"label": "naive_perevent", "runs": 10, "requests_per_run": 3000, "rps_mean": 128.3006615414953, "rps_stdev": 12.870224261505129, "p50_mean": 6.446844999959467, "p99_mean": 31.897298699936982}

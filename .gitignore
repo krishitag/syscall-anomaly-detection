@@ -1,2 +1,7 @@
 data/
 __pycache__/
+data/*.csv
+!data/normal.csv
+!data/eval.csv
+!data/attack_log.csv
+__pycache__/
