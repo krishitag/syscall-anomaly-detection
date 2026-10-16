@@ -75,6 +75,11 @@ writes its header from the same list.
 | `stat_03` | 1 | Syscalls that returned an error | Always 0: not implemented yet |
 | `stat_04` | 1 | Distinct syscall families seen in the window (0–20) | Real |
 
+The model takes the full 74-dimensional input, but only 21 of those features
+are populated in the current data and evaluation: the 20 syscall counts and
+`stat_04`. Pair counts and `stat_01`–`stat_03` are designed but not yet
+collected.
+
 The 20 syscalls fall into two groups:
 
 - **Normal-behaviour syscalls** give the model a baseline: `read`, `write`,
@@ -95,7 +100,10 @@ member2/         CSV contract, validation, feature matrix, evaluation labels (Me
 person3_ml/      autoencoder, training, detection, evaluation, plots (Member 3)
   models/        trained model, fitted scaler, threshold
   results/       training loss and reconstruction-error plots
-data/            captured CSVs (normal.csv committed; other captures gitignored)
+demo/            live watcher: scores each new window and prints NORMAL / ALERT
+data/            normal.csv, eval.csv, attack_log.csv, bench.jsonl (other captures gitignored)
+bench.py         HTTP throughput/latency benchmark for the overhead measurement
+analyze.py       per-attack detection delay and unshare visibility on eval.csv
 tests/           Member 2 test suite and a real-data sample fixture
 docs/            contract, vocabulary, handoff and architecture notes
 ```
@@ -183,21 +191,34 @@ python3 -m unittest discover -s tests -v
 ## Status
 
 **Working:** the full path runs on real kernel data, from the eBPF tracer to
-the trained model. The training set `data/normal.csv` has 628 windows from 10
-minutes of nginx traffic.
+the trained model and a live alert loop (`demo/watch.py`). The training set
+`data/normal.csv` has 628 windows from 10 minutes of nginx traffic.
+
+**Results** on `data/eval.csv` (221 windows, 12 attack windows), committed
+model, 95th-percentile threshold:
+
+| TP | FP | TN | FN | Precision | Recall | F1 | FPR | Attacks detected |
+|---|---|---|---|---|---|---|---|---|
+| 8 | 8 | 201 | 4 | 0.500 | 0.667 | 0.571 | 0.038 | 5/5 |
+
+- **Detection delay:** mean 0.76 s, max 1.04 s, about one window.
+- **Overhead:** exporting every syscall event to user space cut nginx
+  throughput by 72.8%. The in-kernel tracer's overhead was below the
+  measurement noise on the test VM (`bench.py`, `data/bench.jsonl`).
+- **Analysis scripts:** `person3_ml/evaluate.py` and `analyze.py` reproduce
+  these numbers.
 
 **Not done yet:**
 
-- The evaluation capture (`data/eval.csv`, `data/attack_log.csv`), and
-  therefore the detection metrics.
-- The live demo loop: tracer → `prepare_window` → `score_window` → alert.
-- Syscall-pair counting and `stat_01`–`stat_03` (planned for the final review).
-- The threshold is the 95th percentile of validation error, so about 5% of
-  normal windows are flagged. The original plan was mean + 3 × std. This is
-  under review.
-- Renaming placeholder column names (`pair_37_count`, etc.) to readable names
-  for the report.
-- Measuring the tracer's overhead on the container.
+- Syscall-pair counting and `stat_01`–`stat_03`. The current model uses 21
+  populated features.
+- `unshare` never appeared in the evaluation capture. It is likely blocked by
+  Docker's default seccomp profile before the tracepoint fires; this is still
+  to be confirmed.
+- The threshold is the 95th percentile of validation error, so about 4% of
+  normal windows were flagged in evaluation.
+- Renaming placeholder column names (`pair_37_count`, etc.) to readable names.
+- Measuring overhead on bare metal (the VM's run-to-run variance is about ±14%).
 
 **Known limitations:**
 
