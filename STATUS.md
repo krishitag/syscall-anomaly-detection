@@ -85,7 +85,6 @@ detection delay is 0.76 s and the maximum is 1.04 s.
 
 | Item | Priority |
 |---|---|
-| Commit the updated README (results, 21-feature caveat, new files) | 🟠 Before Review 3 |
 | If the unshare check says "command not found": use the prepared results that exclude window 90 (220 windows, TP 7, FP 8, TN 201, FN 4, precision 0.467, recall 0.636, FPR 0.038, 4/4 attacks) | 🔴 Only if needed |
 | Rename placeholder columns (`pair_37_count`, etc.) to readable names (team decision) | ⚪ Future work |
 
