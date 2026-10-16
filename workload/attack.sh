@@ -12,7 +12,7 @@ echo "attack,start_ns,end_ns" > "$LOG"
 run() {
   local name=$1; shift
   local s; s=$(date +%s%N)
-  "$@" >/dev/null 2>&1 || true
+  timeout 5 "$@" >/dev/null 2>&1 || true
   local e; e=$(date +%s%N)
   echo "$name,$s,$e" >> "$LOG"
   echo "[$(date +%T)] $name"
