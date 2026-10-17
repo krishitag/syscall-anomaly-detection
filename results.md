@@ -1,8 +1,8 @@
 # Collection Overhead — Measured Results
 
 **Last updated:** 2026-10-17 (evening session) · **Measured by:** Naman Bhatia (Member 1)
-**Raw data:** `bench/results.csv` (microbenchmark, current session), `bench/results_old.csv`
-(morning session), `data/bench.jsonl` (nginx throughput, all sessions), `bench/window_stats.log`
+**Raw data:** `bench/results.csv` (microbenchmark, evening session B), `bench/results_session_a.csv`
+(morning session A, restored from commit `1889f26`), `data/bench.jsonl` (nginx throughput, all sessions), `bench/window_stats.log`
 **Harness:** `bench/run_all.sh`, `bench/syscall_bench.c`, `bench/run_nginx.sh`, `bench.py`,
 `bench/window_stats.sh`
 
@@ -35,7 +35,7 @@
 
 Every traced condition waits for the tracer to report attachment before measuring. This check
 was added after an earlier run measured *faster* than the untraced baseline because the tracer
-had silently failed to attach (the 1022 rps line kept in `data/bench.jsonl`, excluded from all
+had most likely failed to attach (the 1022 rps line kept in `data/bench.jsonl`, excluded from all
 results).
 
 ---
@@ -74,7 +74,7 @@ All three conditions in one session, 10 runs × 5,000,000 iterations each.
 
 Run ranges: baseline 423–553, unigram 617–797, bigram 685–977 ns.
 
-### Session A — morning (`bench/results_old.csv`)
+### Session A — morning (`bench/results_session_a.csv`)
 
 | Condition | Median ns/syscall | Runs × iterations | Δ vs baseline | Ratio |
 |---|---|---|---|---|
@@ -165,7 +165,7 @@ Sampled during each session-B run from the tracer's Python process (`collector_c
   process, so its cost lands on the container (that's what §4 measures), not on the collector.
   Collector CPU covers only the once-per-second poller.
 
-Session-A collector columns (`bench/results_old.csv`) measured the `sudo` wrapper rather than
+Session-A collector columns (`bench/results_session_a.csv`) measured the `sudo` wrapper rather than
 the tracer and are invalid.
 
 ---
@@ -269,3 +269,14 @@ bash bench/window_stats.sh                           # window stats + map sizes 
 
 Microbenchmark results append to `bench/results.csv`; nginx results append to `data/bench.jsonl`.
 If anything hangs, `bash kill.sh` stops every script and tracer and unpins the container.
+
+---
+
+## Note on `bench/results_old.csv`
+
+This file is **not** session A. Its timestamps put it at 19:25–19:26 on 17 Oct, two minutes
+before session B. It holds 10 baseline runs (median 529.42 ns) and 10 `in_kernel` runs (median
+761.43 ns, +232 ns, 1.44×). That is closer to the unigram-only tracer's +220 ns than to the
+bigram tracer's +356 ns, and which tracer was running has not been confirmed. It is not used in
+any figure above.
+
