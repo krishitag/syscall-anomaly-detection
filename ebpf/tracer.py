@@ -4,6 +4,11 @@ Container syscall tracer: in-kernel unigram + bigram aggregation,
 sliding windows.
 
 usage: sudo python3 ebpf/tracer.py <container> [out.csv]
+
+Status line per window also reports (for the paper, not written to the CSV):
+  distinct = distinct syscall numbers of ANY kind seen in the window
+  total    = total syscalls of any kind in the window
+  map      = unigram/bigram map entries at read time (size of each read)
 """
 from bcc import BPF
 import csv, json, os, subprocess, sys, time
@@ -25,7 +30,6 @@ def cgroup_id_for(container):
 container = sys.argv[1] if len(sys.argv) > 1 else "demo"
 cgid = cgroup_id_for(container)
 
-# the 50 emitted pair columns, as (vocab_i, vocab_j); empty until surveyed
 if os.path.exists(PAIRS_FILE):
     PAIRS = [tuple(p) for p in json.load(open(PAIRS_FILE))]
 else:
@@ -59,7 +63,7 @@ TRACEPOINT_PROBE(raw_syscalls, sys_enter) {
 
 b = BPF(text=prog, cflags=[f"-DTARGET_CGROUP={cgid}ULL"])
 uni_map, big_map = b["counts"], b["bigrams"]
-print(f"container={container} cgroup_id={cgid}  (Ctrl+C to stop)")
+print(f"container={container} cgroup_id={cgid}  (Ctrl+C to stop)", flush=True)
 
 out_path = sys.argv[2] if len(sys.argv) > 2 else \
     f"data/{container}_{time.strftime('%Y%m%d_%H%M%S')}.csv"
@@ -67,50 +71,56 @@ os.makedirs(os.path.dirname(out_path) or ".", exist_ok=True)
 f = open(out_path, "w", newline="")
 w = csv.writer(f, lineterminator="\n")
 w.writerow(schema.ALL_COLUMNS)
-print(f"writing {out_path}  (sliding {SPAN_TICKS}s window, {TICK_NS/1e9:g}s step)")
+print(f"writing {out_path}  (sliding {SPAN_TICKS}s window, {TICK_NS/1e9:g}s step)", flush=True)
 
 def snapshot():
     uni = {k.value: v.value for k, v in uni_map.items()}
-    big = {}
+    big, n_raw = {}, 0
     for k, v in big_map.items():
+        n_raw += 1
         prev_nr, curr_nr = k.value >> 32, k.value & 0xFFFFFFFF
         i, j = NR_TO_INDEX.get(prev_nr), NR_TO_INDEX.get(curr_nr)
-        if i is not None and j is not None:          # both in vocab
+        if i is not None and j is not None:
             big[(i, j)] = big.get((i, j), 0) + v.value
-    return uni, big
+    return uni, big, n_raw
 
-hist = []           # [(ts, uni, big)] - newest last
-survey = {}         # vocab-pair -> total, for pick_pairs.py
+hist = []
+survey = {}
 tick = time.time_ns()
 try:
     while True:
         time.sleep(max(0, (tick + TICK_NS - time.time_ns()) / 1e9))
         now = time.time_ns()
-        uni, big = snapshot()
+        uni, big, n_big_raw = snapshot()
         hist.append((now, uni, big))
         if len(hist) > SPAN_TICKS + 1:
             hist.pop(0)
         tick = now
 
         for p, c in big.items():
-            survey[p] = c                             # cumulative totals
+            survey[p] = c
 
         if len(hist) < SPAN_TICKS + 1:
-            continue                                  # not enough history yet
+            continue
 
         base_ts, base_uni, base_big = hist[0]
 
         vec = [0] * 20
-        for nr, total in uni.items():
+        distinct = total = 0
+        for nr, t in uni.items():
+            d = t - base_uni.get(nr, 0)
+            if d > 0:
+                distinct += 1
+                total += d
             i = NR_TO_INDEX.get(nr)
             if i is not None:
-                vec[i] = total - base_uni.get(nr, 0)
+                vec[i] = d
 
         pairs = [0] * 50
-        for p, total in big.items():
+        for p, t in big.items():
             k = PAIR_INDEX.get(p)
             if k is not None:
-                pairs[k] = total - base_big.get(p, 0)
+                pairs[k] = t - base_big.get(p, 0)
 
         stats = [0.0, 0.0, 0, sum(1 for c in vec if c)]
         w.writerow([cgid, base_ts, now] + vec + pairs + stats)
@@ -118,7 +128,8 @@ try:
 
         active = {VOCAB_NAMES[i]: c for i, c in enumerate(vec) if c}
         npair = sum(1 for c in pairs if c)
-        print(f"[{base_ts}..{now}] pairs={npair} {active or 'idle'}")
+        print(f"[{base_ts}..{now}] pairs={npair} distinct={distinct} total={total} "
+              f"map={len(uni)}/{n_big_raw} {active or 'idle'}", flush=True)
 except KeyboardInterrupt:
     pass
 finally:

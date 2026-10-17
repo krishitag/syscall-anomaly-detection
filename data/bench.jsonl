@@ -5,3 +5,6 @@
 {"label": "tracer_on", "runs": 10, "requests_per_run": 3000, "rps_mean": 490.7001169277173, "rps_stdev": 50.96299820190254, "p50_mean": 1.5296939000108978, "p99_mean": 11.566165999988698}
 {"label": "naive_perevent", "runs": 10, "requests_per_run": 3000, "rps_mean": 1022.0186201118775, "rps_stdev": 69.86815777913272, "p50_mean": 0.8784513999898991, "p99_mean": 2.878686200028824}
 {"label": "naive_perevent", "runs": 10, "requests_per_run": 3000, "rps_mean": 128.3006615414953, "rps_stdev": 12.870224261505129, "p50_mean": 6.446844999959467, "p99_mean": 31.897298699936982}
+{"label": "nginx_off_bigram_session", "runs": 10, "requests_per_run": 3000, "rps_mean": 508.2144381824167, "rps_stdev": 97.22141742215364, "p50_mean": 1.5330453999467863, "p99_mean": 11.158177199922648}
+{"label": "nginx_in_kernel_bigram", "runs": 10, "requests_per_run": 3000, "rps_mean": 534.8479201947629, "rps_stdev": 145.52196751717935, "p50_mean": 1.5094472999408026, "p99_mean": 10.218542899929162}
+{"label": "nginx_naive_bigram_session", "runs": 10, "requests_per_run": 3000, "rps_mean": 135.0602448692581, "rps_stdev": 12.852999223150423, "p50_mean": 6.1679923001520365, "p99_mean": 30.222632700042595}

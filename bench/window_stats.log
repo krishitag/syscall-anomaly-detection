@@ -1,0 +1,164 @@
+In file included from <built-in>:2:
+In file included from /virtual/include/bcc/bpf.h:12:
+In file included from include/linux/types.h:6:
+In file included from include/uapi/linux/types.h:14:
+In file included from include/uapi/linux/posix_types.h:5:
+In file included from include/linux/stddef.h:5:
+In file included from include/uapi/linux/stddef.h:5:
+In file included from include/linux/compiler_types.h:161:
+include/linux/compiler-clang.h:64:9: warning: '__HAVE_BUILTIN_BSWAP32__' macro redefined [-Wmacro-redefined]
+#define __HAVE_BUILTIN_BSWAP32__
+        ^
+<command line>:4:9: note: previous definition is here
+#define __HAVE_BUILTIN_BSWAP32__ 1
+        ^
+In file included from <built-in>:2:
+In file included from /virtual/include/bcc/bpf.h:12:
+In file included from include/linux/types.h:6:
+In file included from include/uapi/linux/types.h:14:
+In file included from include/uapi/linux/posix_types.h:5:
+In file included from include/linux/stddef.h:5:
+In file included from include/uapi/linux/stddef.h:5:
+In file included from include/linux/compiler_types.h:161:
+include/linux/compiler-clang.h:65:9: warning: '__HAVE_BUILTIN_BSWAP64__' macro redefined [-Wmacro-redefined]
+#define __HAVE_BUILTIN_BSWAP64__
+        ^
+<command line>:5:9: note: previous definition is here
+#define __HAVE_BUILTIN_BSWAP64__ 1
+        ^
+In file included from <built-in>:2:
+In file included from /virtual/include/bcc/bpf.h:12:
+In file included from include/linux/types.h:6:
+In file included from include/uapi/linux/types.h:14:
+In file included from include/uapi/linux/posix_types.h:5:
+In file included from include/linux/stddef.h:5:
+In file included from include/uapi/linux/stddef.h:5:
+In file included from include/linux/compiler_types.h:161:
+include/linux/compiler-clang.h:66:9: warning: '__HAVE_BUILTIN_BSWAP16__' macro redefined [-Wmacro-redefined]
+#define __HAVE_BUILTIN_BSWAP16__
+        ^
+<command line>:3:9: note: previous definition is here
+#define __HAVE_BUILTIN_BSWAP16__ 1
+        ^
+3 warnings generated.
+container=demo cgroup_id=11584  (Ctrl+C to stop)
+writing /tmp/_window_stats.csv  (sliding 2s window, 1s step)
+[1792246376965356969..1792246378968897500] pairs=7 distinct=12 total=114 map=12/19 {'write': 11, 'recvfrom': 9, 'openat': 9, 'close': 16, 'epoll_wait': 18, 'accept4': 9, 'sendfile': 7}
+[1792246377967395210..1792246379974651721] pairs=7 distinct=12 total=127 map=12/19 {'write': 11, 'recvfrom': 10, 'openat': 10, 'close': 19, 'epoll_wait': 20, 'accept4': 10, 'sendfile': 9}
+[1792246378968897500..1792246380976794834] pairs=7 distinct=11 total=50 map=12/19 {'write': 4, 'recvfrom': 4, 'openat': 4, 'close': 8, 'epoll_wait': 8, 'accept4': 4, 'sendfile': 4}
+[1792246379974651721..1792246381979068554] pairs=7 distinct=11 total=77 map=12/19 {'write': 6, 'recvfrom': 6, 'openat': 6, 'close': 12, 'epoll_wait': 12, 'accept4': 6, 'sendfile': 6}
+[1792246380976794834..1792246382983114459] pairs=7 distinct=12 total=88 map=12/19 {'write': 8, 'recvfrom': 7, 'openat': 7, 'close': 13, 'epoll_wait': 14, 'accept4': 7, 'sendfile': 6}
+[1792246381979068554..1792246383988777318] pairs=7 distinct=12 total=37 map=12/19 {'write': 4, 'recvfrom': 3, 'openat': 3, 'close': 5, 'epoll_wait': 6, 'accept4': 3, 'sendfile': 2}
+[1792246382983114459..1792246384996174913] pairs=7 distinct=11 total=66 map=12/19 {'write': 5, 'recvfrom': 5, 'openat': 5, 'close': 10, 'epoll_wait': 10, 'accept4': 5, 'sendfile': 5}
+[1792246383988777318..1792246385996866539] pairs=7 distinct=12 total=153 map=12/19 {'write': 13, 'recvfrom': 12, 'openat': 12, 'close': 23, 'epoll_wait': 24, 'accept4': 12, 'sendfile': 11}
+[1792246384996174913..1792246386999719682] pairs=7 distinct=12 total=124 map=12/19 {'write': 12, 'recvfrom': 10, 'openat': 10, 'close': 18, 'epoll_wait': 20, 'accept4': 10, 'sendfile': 8}
+[1792246385996866539..1792246388079321858] pairs=7 distinct=12 total=88 map=12/19 {'write': 9, 'recvfrom': 7, 'openat': 7, 'close': 12, 'epoll_wait': 14, 'accept4': 7, 'sendfile': 5}
+[1792246386999719682..1792246389085588325] pairs=7 distinct=12 total=140 map=12/19 {'write': 12, 'recvfrom': 11, 'openat': 11, 'close': 21, 'epoll_wait': 22, 'accept4': 11, 'sendfile': 10}
+[1792246388079321858..1792246390093311683] pairs=7 distinct=12 total=124 map=12/19 {'write': 12, 'recvfrom': 10, 'openat': 10, 'close': 18, 'epoll_wait': 20, 'accept4': 10, 'sendfile': 8}
+[1792246389085588325..1792246391108614272] pairs=7 distinct=12 total=135 map=12/19 {'write': 15, 'recvfrom': 11, 'openat': 11, 'close': 18, 'epoll_wait': 22, 'accept4': 11, 'sendfile': 7}
+[1792246390093311683..1792246392112362909] pairs=7 distinct=12 total=149 map=12/19 {'write': 15, 'recvfrom': 12, 'openat': 12, 'close': 21, 'epoll_wait': 24, 'accept4': 12, 'sendfile': 9}
+[1792246391108614272..1792246393113595896] pairs=7 distinct=12 total=138 map=12/19 {'write': 13, 'recvfrom': 11, 'openat': 11, 'close': 20, 'epoll_wait': 22, 'accept4': 11, 'sendfile': 9}
+[1792246392112362909..1792246394133839606] pairs=7 distinct=12 total=139 map=12/19 {'write': 13, 'recvfrom': 11, 'openat': 11, 'close': 20, 'epoll_wait': 22, 'accept4': 11, 'sendfile': 9}
+[1792246393113595896..1792246395136256447] pairs=7 distinct=12 total=135 map=12/19 {'write': 13, 'recvfrom': 11, 'openat': 11, 'close': 20, 'epoll_wait': 22, 'accept4': 11, 'sendfile': 9}
+[1792246394133839606..1792246396139104433] pairs=7 distinct=12 total=106 map=12/19 {'write': 12, 'recvfrom': 9, 'openat': 9, 'close': 15, 'epoll_wait': 18, 'accept4': 9, 'sendfile': 6}
+[1792246395136256447..1792246397147691966] pairs=7 distinct=12 total=96 map=12/19 {'write': 11, 'recvfrom': 8, 'openat': 8, 'close': 13, 'epoll_wait': 16, 'accept4': 8, 'sendfile': 5}
+[1792246396139104433..1792246398152644870] pairs=7 distinct=12 total=62 map=12/19 {'write': 6, 'recvfrom': 5, 'openat': 5, 'close': 9, 'epoll_wait': 10, 'accept4': 5, 'sendfile': 4}
+[1792246397147691966..1792246399153353176] pairs=7 distinct=12 total=375 map=12/19 {'write': 35, 'recvfrom': 30, 'openat': 30, 'close': 55, 'epoll_wait': 60, 'accept4': 30, 'sendfile': 25}
+[1792246398152644870..1792246400155497486] pairs=7 distinct=12 total=720 map=12/19 {'write': 69, 'recvfrom': 58, 'openat': 58, 'close': 105, 'epoll_wait': 116, 'accept4': 58, 'sendfile': 47}
+[1792246399153353176..1792246401156384858] pairs=7 distinct=12 total=714 map=12/19 {'write': 72, 'recvfrom': 58, 'openat': 58, 'close': 102, 'epoll_wait': 116, 'accept4': 58, 'sendfile': 44}
+[1792246400155497486..1792246402157988896] pairs=7 distinct=12 total=740 map=12/19 {'write': 77, 'recvfrom': 60, 'openat': 60, 'close': 103, 'epoll_wait': 120, 'accept4': 60, 'sendfile': 43}
+[1792246401156384858..1792246403159708606] pairs=7 distinct=12 total=694 map=12/19 {'write': 68, 'recvfrom': 56, 'openat': 56, 'close': 100, 'epoll_wait': 112, 'accept4': 56, 'sendfile': 44}
+[1792246402157988896..1792246404160995203] pairs=7 distinct=12 total=670 map=12/19 {'write': 61, 'recvfrom': 54, 'openat': 54, 'close': 101, 'epoll_wait': 108, 'accept4': 54, 'sendfile': 47}
+[1792246403159708606..1792246405161525068] pairs=7 distinct=12 total=727 map=12/19 {'write': 64, 'recvfrom': 58, 'openat': 58, 'close': 110, 'epoll_wait': 116, 'accept4': 58, 'sendfile': 52}
+[1792246404160995203..1792246406163742457] pairs=7 distinct=12 total=689 map=12/19 {'write': 63, 'recvfrom': 55, 'openat': 55, 'close': 102, 'epoll_wait': 110, 'accept4': 55, 'sendfile': 47}
+[1792246405161525068..1792246407164636739] pairs=7 distinct=12 total=704 map=12/19 {'write': 72, 'recvfrom': 57, 'openat': 57, 'close': 99, 'epoll_wait': 114, 'accept4': 57, 'sendfile': 42}
+[1792246406163742457..1792246408165813695] pairs=7 distinct=12 total=730 map=12/19 {'write': 74, 'recvfrom': 59, 'openat': 59, 'close': 103, 'epoll_wait': 118, 'accept4': 59, 'sendfile': 44}
+[1792246407164636739..1792246409167685671] pairs=7 distinct=12 total=600 map=12/19 {'write': 57, 'recvfrom': 48, 'openat': 48, 'close': 87, 'epoll_wait': 96, 'accept4': 48, 'sendfile': 39}
+[1792246408165813695..1792246410170960174] pairs=7 distinct=12 total=603 map=12/19 {'write': 58, 'recvfrom': 48, 'openat': 48, 'close': 86, 'epoll_wait': 97, 'accept4': 49, 'sendfile': 38}
+[1792246409167685671..1792246411181046113] pairs=7 distinct=12 total=746 map=12/19 {'write': 74, 'recvfrom': 60, 'openat': 60, 'close': 106, 'epoll_wait': 120, 'accept4': 60, 'sendfile': 46}
+[1792246410170960174..1792246412182576724] pairs=29 distinct=77 total=1649 map=77/257 {'read': 52, 'write': 70, 'recvfrom': 54, 'openat': 96, 'close': 173, 'mmap': 68, 'munmap': 7, 'execve': 5, 'epoll_wait': 105, 'clone': 4, 'connect': 8, 'accept4': 52, 'socket': 8, 'kill': 1, 'sendfile': 43}
+[1792246411181046113..1792246413186686514] pairs=29 distinct=77 total=1549 map=77/257 {'read': 52, 'write': 59, 'recvfrom': 46, 'openat': 88, 'close': 160, 'mmap': 68, 'munmap': 7, 'execve': 5, 'epoll_wait': 90, 'clone': 4, 'connect': 8, 'accept4': 45, 'socket': 8, 'kill': 1, 'sendfile': 38}
+[1792246412182576724..1792246414187758390] pairs=7 distinct=12 total=830 map=77/258 {'write': 78, 'recvfrom': 67, 'openat': 67, 'close': 123, 'epoll_wait': 132, 'accept4': 67, 'sendfile': 56}
+[1792246413186686514..1792246415189655579] pairs=7 distinct=12 total=2282 map=77/262 {'write': 218, 'recvfrom': 184, 'openat': 183, 'close': 334, 'epoll_wait': 349, 'accept4': 193, 'sendfile': 150}
+[1792246414187758390..1792246416192844289] pairs=7 distinct=12 total=2559 map=77/262 {'write': 250, 'recvfrom': 208, 'openat': 207, 'close': 374, 'epoll_wait': 385, 'accept4': 216, 'sendfile': 166}
+[1792246415189655579..1792246417199097855] pairs=7 distinct=12 total=835 map=77/262 {'write': 85, 'recvfrom': 69, 'openat': 69, 'close': 122, 'epoll_wait': 124, 'accept4': 68, 'sendfile': 53}
+[1792246416192844289..1792246418199344346] pairs=7 distinct=12 total=100 map=77/262 {'write': 9, 'recvfrom': 8, 'openat': 8, 'close': 15, 'epoll_wait': 16, 'accept4': 8, 'sendfile': 7}
+[1792246417199097855..1792246419199864371] pairs=7 distinct=11 total=89 map=77/262 {'write': 7, 'recvfrom': 7, 'openat': 7, 'close': 14, 'epoll_wait': 14, 'accept4': 7, 'sendfile': 7}
+[1792246418199344346..1792246420200770472] pairs=7 distinct=11 total=52 map=77/262 {'write': 4, 'recvfrom': 4, 'openat': 4, 'close': 8, 'epoll_wait': 8, 'accept4': 4, 'sendfile': 4}
+[1792246419199864371..1792246421383207113] pairs=7 distinct=11 total=52 map=77/262 {'write': 4, 'recvfrom': 4, 'openat': 4, 'close': 8, 'epoll_wait': 8, 'accept4': 4, 'sendfile': 4}
+[1792246420200770472..1792246422383917649] pairs=7 distinct=11 total=51 map=77/262 {'write': 4, 'recvfrom': 4, 'openat': 4, 'close': 8, 'epoll_wait': 8, 'accept4': 4, 'sendfile': 4}
+[1792246421383207113..1792246423386003168] pairs=6 distinct=11 total=52 map=77/262 {'write': 4, 'recvfrom': 4, 'openat': 4, 'close': 8, 'epoll_wait': 8, 'accept4': 4, 'sendfile': 4}
+[1792246422383917649..1792246424402353435] pairs=6 distinct=11 total=52 map=77/262 {'write': 4, 'recvfrom': 4, 'openat': 4, 'close': 8, 'epoll_wait': 8, 'accept4': 4, 'sendfile': 4}
+[1792246423386003168..1792246425404236294] pairs=6 distinct=11 total=39 map=77/262 {'write': 3, 'recvfrom': 3, 'openat': 3, 'close': 6, 'epoll_wait': 6, 'accept4': 3, 'sendfile': 3}
+[1792246424402353435..1792246426407038982] pairs=7 distinct=11 total=38 map=77/262 {'write': 3, 'recvfrom': 3, 'openat': 3, 'close': 6, 'epoll_wait': 6, 'accept4': 3, 'sendfile': 3}
+[1792246425404236294..1792246427407764471] pairs=15 distinct=46 total=518 map=78/270 {'read': 23, 'write': 12, 'recvfrom': 7, 'openat': 19, 'close': 41, 'mmap': 2, 'execve': 1, 'epoll_wait': 12, 'accept4': 6, 'sendfile': 3}
+[1792246426407038982..1792246428408546235] pairs=24 distinct=76 total=922 map=83/293 {'read': 43, 'write': 12, 'recvfrom': 6, 'openat': 45, 'close': 79, 'mmap': 82, 'munmap': 6, 'execve': 6, 'epoll_wait': 10, 'clone': 5, 'connect': 2, 'accept4': 5, 'socket': 2, 'fchmodat': 1, 'fchownat': 1, 'sendfile': 2}
+[1792246427407764471..1792246429468544773] pairs=19 distinct=54 total=453 map=83/293 {'read': 20, 'write': 5, 'recvfrom': 3, 'openat': 30, 'close': 45, 'mmap': 80, 'munmap': 6, 'execve': 5, 'epoll_wait': 6, 'clone': 5, 'connect': 2, 'accept4': 3, 'socket': 2, 'fchmodat': 1, 'fchownat': 1, 'sendfile': 2}
+[1792246428408546235..1792246430469641429] pairs=7 distinct=12 total=85 map=83/293 {'write': 10, 'recvfrom': 7, 'openat': 7, 'close': 11, 'epoll_wait': 14, 'accept4': 7, 'sendfile': 4}
+[1792246429468544773..1792246431503747614] pairs=7 distinct=12 total=86 map=83/293 {'write': 9, 'recvfrom': 7, 'openat': 7, 'close': 12, 'epoll_wait': 14, 'accept4': 7, 'sendfile': 5}
+[1792246430469641429..1792246432510100939] pairs=7 distinct=11 total=38 map=83/293 {'write': 3, 'recvfrom': 3, 'openat': 3, 'close': 6, 'epoll_wait': 6, 'accept4': 3, 'sendfile': 3}
+[1792246431503747614..1792246433513551206] pairs=7 distinct=11 total=79 map=83/293 {'write': 6, 'recvfrom': 6, 'openat': 6, 'close': 12, 'epoll_wait': 12, 'accept4': 6, 'sendfile': 6}
+[1792246432510100939..1792246434517717937] pairs=7 distinct=11 total=79 map=83/293 {'write': 6, 'recvfrom': 6, 'openat': 6, 'close': 12, 'epoll_wait': 12, 'accept4': 6, 'sendfile': 6}
+[1792246433513551206..1792246435644125254] pairs=7 distinct=11 total=51 map=83/293 {'write': 4, 'recvfrom': 4, 'openat': 4, 'close': 8, 'epoll_wait': 8, 'accept4': 4, 'sendfile': 4}
+[1792246434517717937..1792246436645794433] pairs=7 distinct=12 total=75 map=83/293 {'write': 7, 'recvfrom': 6, 'openat': 6, 'close': 11, 'epoll_wait': 12, 'accept4': 6, 'sendfile': 5}
+[1792246435644125254..1792246437650953548] pairs=7 distinct=12 total=50 map=83/293 {'write': 5, 'recvfrom': 4, 'openat': 4, 'close': 7, 'epoll_wait': 8, 'accept4': 4, 'sendfile': 3}
+[1792246436645794433..1792246438684888512] pairs=7 distinct=12 total=189 map=83/293 {'write': 18, 'recvfrom': 15, 'openat': 15, 'close': 27, 'epoll_wait': 30, 'accept4': 15, 'sendfile': 12}
+[1792246437650953548..1792246439686423258] pairs=7 distinct=12 total=354 map=83/293 {'write': 32, 'recvfrom': 28, 'openat': 28, 'close': 52, 'epoll_wait': 56, 'accept4': 28, 'sendfile': 24}
+[1792246438684888512..1792246440692081380] pairs=7 distinct=12 total=381 map=83/293 {'write': 33, 'recvfrom': 30, 'openat': 30, 'close': 57, 'epoll_wait': 60, 'accept4': 30, 'sendfile': 27}
+[1792246439686423258..1792246441696095403] pairs=7 distinct=12 total=429 map=83/293 {'write': 38, 'recvfrom': 34, 'openat': 34, 'close': 64, 'epoll_wait': 68, 'accept4': 34, 'sendfile': 30}
+[1792246440692081380..1792246442696822086] pairs=7 distinct=12 total=506 map=83/293 {'write': 51, 'recvfrom': 41, 'openat': 41, 'close': 72, 'epoll_wait': 82, 'accept4': 41, 'sendfile': 31}
+[1792246441696095403..1792246443699966243] pairs=23 distinct=69 total=1236 map=85/322 {'read': 27, 'write': 64, 'recvfrom': 49, 'openat': 67, 'close': 122, 'mmap': 13, 'munmap': 1, 'execve': 1, 'epoll_wait': 96, 'connect': 3, 'accept4': 48, 'socket': 3, 'sendfile': 35}
+[1792246442696822086..1792246444705784718] pairs=23 distinct=69 total=1205 map=85/322 {'read': 27, 'write': 57, 'recvfrom': 46, 'openat': 64, 'close': 120, 'mmap': 13, 'munmap': 1, 'execve': 1, 'epoll_wait': 90, 'connect': 3, 'accept4': 45, 'socket': 3, 'sendfile': 36}
+[1792246443699966243..1792246445706785400] pairs=7 distinct=12 total=531 map=85/322 {'write': 50, 'recvfrom': 42, 'openat': 42, 'close': 76, 'epoll_wait': 85, 'accept4': 43, 'sendfile': 34}
+[1792246444705784718..1792246446708597535] pairs=7 distinct=12 total=556 map=85/322 {'write': 52, 'recvfrom': 44, 'openat': 44, 'close': 80, 'epoll_wait': 88, 'accept4': 44, 'sendfile': 36}
+[1792246445706785400..1792246447709347134] pairs=7 distinct=12 total=504 map=85/322 {'write': 45, 'recvfrom': 40, 'openat': 40, 'close': 75, 'epoll_wait': 79, 'accept4': 39, 'sendfile': 35}
+[1792246446708597535..1792246448714071253] pairs=7 distinct=12 total=418 map=85/322 {'write': 37, 'recvfrom': 33, 'openat': 33, 'close': 62, 'epoll_wait': 66, 'accept4': 33, 'sendfile': 29}
+[1792246447709347134..1792246449714961376] pairs=7 distinct=12 total=375 map=85/322 {'write': 36, 'recvfrom': 30, 'openat': 30, 'close': 54, 'epoll_wait': 60, 'accept4': 30, 'sendfile': 24}
+[1792246448714071253..1792246450715791493] pairs=7 distinct=12 total=416 map=85/322 {'write': 38, 'recvfrom': 33, 'openat': 33, 'close': 61, 'epoll_wait': 66, 'accept4': 33, 'sendfile': 28}
+[1792246449714961376..1792246451719354302] pairs=7 distinct=12 total=466 map=85/322 {'write': 41, 'recvfrom': 37, 'openat': 37, 'close': 70, 'epoll_wait': 74, 'accept4': 37, 'sendfile': 33}
+[1792246450715791493..1792246452724330723] pairs=7 distinct=12 total=417 map=85/322 {'write': 36, 'recvfrom': 33, 'openat': 33, 'close': 63, 'epoll_wait': 66, 'accept4': 33, 'sendfile': 30}
+[1792246451719354302..1792246453733189153] pairs=7 distinct=12 total=388 map=85/322 {'write': 38, 'recvfrom': 31, 'openat': 31, 'close': 55, 'epoll_wait': 62, 'accept4': 31, 'sendfile': 24}
+[1792246452724330723..1792246454733723474] pairs=7 distinct=12 total=589 map=85/322 {'write': 61, 'recvfrom': 48, 'openat': 47, 'close': 80, 'epoll_wait': 95, 'accept4': 48, 'sendfile': 33}
+[1792246453733189153..1792246455734685118] pairs=7 distinct=12 total=803 map=85/322 {'write': 76, 'recvfrom': 64, 'openat': 64, 'close': 116, 'epoll_wait': 128, 'accept4': 64, 'sendfile': 52}
+[1792246454733723474..1792246456755083057] pairs=7 distinct=12 total=760 map=85/322 {'write': 71, 'recvfrom': 60, 'openat': 61, 'close': 112, 'epoll_wait': 121, 'accept4': 60, 'sendfile': 51}
+[1792246455734685118..1792246457782388541] pairs=7 distinct=12 total=917 map=85/322 {'write': 87, 'recvfrom': 73, 'openat': 73, 'close': 132, 'epoll_wait': 147, 'accept4': 73, 'sendfile': 59}
+[1792246456755083057..1792246458784046242] pairs=7 distinct=12 total=917 map=85/322 {'write': 84, 'recvfrom': 73, 'openat': 73, 'close': 135, 'epoll_wait': 146, 'accept4': 73, 'sendfile': 62}
+[1792246457782388541..1792246459785132592] pairs=7 distinct=12 total=756 map=85/322 {'write': 65, 'recvfrom': 60, 'openat': 59, 'close': 115, 'epoll_wait': 119, 'accept4': 60, 'sendfile': 54}
+[1792246458784046242..1792246460785610500] pairs=7 distinct=12 total=959 map=85/322 {'write': 85, 'recvfrom': 76, 'openat': 76, 'close': 143, 'epoll_wait': 152, 'accept4': 76, 'sendfile': 67}
+[1792246459785132592..1792246461790773415] pairs=7 distinct=12 total=948 map=85/322 {'write': 94, 'recvfrom': 76, 'openat': 77, 'close': 134, 'epoll_wait': 152, 'accept4': 76, 'sendfile': 59}
+[1792246460785610500..1792246462796913785] pairs=7 distinct=12 total=831 map=85/322 {'write': 84, 'recvfrom': 67, 'openat': 67, 'close': 117, 'epoll_wait': 135, 'accept4': 68, 'sendfile': 50}
+[1792246461790773415..1792246463798357523] pairs=21 distinct=66 total=1533 map=86/335 {'read': 25, 'write': 89, 'recvfrom': 71, 'openat': 86, 'close': 162, 'mmap': 17, 'munmap': 2, 'execve': 2, 'epoll_wait': 140, 'clone': 1, 'accept4': 70, 'sendfile': 55}
+[1792246462796913785..1792246464801975696] pairs=21 distinct=66 total=1542 map=86/338 {'read': 25, 'write': 97, 'recvfrom': 71, 'openat': 87, 'close': 160, 'mmap': 17, 'munmap': 2, 'execve': 2, 'epoll_wait': 140, 'clone': 1, 'accept4': 70, 'sendfile': 51}
+[1792246463798357523..1792246465803083689] pairs=8 distinct=14 total=789 map=86/338 {'write': 87, 'recvfrom': 63, 'openat': 64, 'close': 108, 'epoll_wait': 127, 'accept4': 64, 'sendfile': 43}
+[1792246464801975696..1792246466804491429] pairs=7 distinct=12 total=854 map=86/338 {'write': 87, 'recvfrom': 69, 'openat': 69, 'close': 120, 'epoll_wait': 138, 'accept4': 69, 'sendfile': 51}
+[1792246465803083689..1792246467805724114] pairs=7 distinct=12 total=925 map=86/338 {'write': 88, 'recvfrom': 74, 'openat': 74, 'close': 134, 'epoll_wait': 148, 'accept4': 74, 'sendfile': 60}
+[1792246466804491429..1792246468806787221] pairs=7 distinct=12 total=953 map=86/338 {'write': 88, 'recvfrom': 77, 'openat': 76, 'close': 140, 'epoll_wait': 153, 'accept4': 76, 'sendfile': 64}
+[1792246467805724114..1792246469809558930] pairs=7 distinct=12 total=952 map=86/338 {'write': 86, 'recvfrom': 76, 'openat': 76, 'close': 142, 'epoll_wait': 152, 'accept4': 76, 'sendfile': 66}
+[1792246468806787221..1792246470811050338] pairs=7 distinct=12 total=867 map=86/338 {'write': 78, 'recvfrom': 68, 'openat': 69, 'close': 129, 'epoll_wait': 137, 'accept4': 69, 'sendfile': 60}
+[1792246469809558930..1792246471813606134] pairs=7 distinct=12 total=930 map=86/338 {'write': 86, 'recvfrom': 74, 'openat': 74, 'close': 136, 'epoll_wait': 148, 'accept4': 74, 'sendfile': 62}
+[1792246470811050338..1792246472817246842] pairs=7 distinct=12 total=878 map=86/338 {'write': 81, 'recvfrom': 70, 'openat': 70, 'close': 129, 'epoll_wait': 140, 'accept4': 70, 'sendfile': 59}
+[1792246471813606134..1792246473819762487] pairs=7 distinct=12 total=936 map=86/338 {'write': 89, 'recvfrom': 75, 'openat': 74, 'close': 136, 'epoll_wait': 150, 'accept4': 75, 'sendfile': 60}
+[1792246472817246842..1792246474820575457] pairs=7 distinct=12 total=961 map=86/338 {'write': 92, 'recvfrom': 77, 'openat': 77, 'close': 139, 'epoll_wait': 154, 'accept4': 77, 'sendfile': 62}
+[1792246473819762487..1792246475821448893] pairs=7 distinct=12 total=846 map=86/338 {'write': 83, 'recvfrom': 68, 'openat': 69, 'close': 121, 'epoll_wait': 136, 'accept4': 68, 'sendfile': 54}
+[1792246474820575457..1792246476824090728] pairs=7 distinct=12 total=889 map=86/338 {'write': 89, 'recvfrom': 72, 'openat': 72, 'close': 127, 'epoll_wait': 144, 'accept4': 72, 'sendfile': 55}
+[1792246475821448893..1792246477824573254] pairs=7 distinct=12 total=833 map=86/338 {'write': 80, 'recvfrom': 67, 'openat': 67, 'close': 121, 'epoll_wait': 134, 'accept4': 67, 'sendfile': 54}
+[1792246476824090728..1792246478826133182] pairs=11 distinct=24 total=951 map=86/339 {'read': 10, 'write': 85, 'recvfrom': 68, 'openat': 68, 'close': 118, 'mmap': 1, 'epoll_wait': 134, 'accept4': 67, 'sendfile': 50}
+[1792246477824573254..1792246479827280367] pairs=20 distinct=66 total=4214 map=88/352 {'read': 78, 'write': 88, 'recvfrom': 70, 'openat': 186, 'close': 265, 'mmap': 417, 'munmap': 52, 'execve': 52, 'epoll_wait': 138, 'clone': 50, 'accept4': 69, 'sendfile': 54}
+[1792246478826133182..1792246480827890963] pairs=17 distinct=62 total=4168 map=88/352 {'read': 68, 'write': 91, 'recvfrom': 75, 'openat': 191, 'close': 278, 'mmap': 416, 'munmap': 52, 'execve': 52, 'epoll_wait': 150, 'clone': 50, 'accept4': 75, 'sendfile': 62}
+[1792246479827280367..1792246481829457034] pairs=7 distinct=12 total=1003 map=88/352 {'write': 97, 'recvfrom': 81, 'openat': 81, 'close': 146, 'epoll_wait': 162, 'accept4': 81, 'sendfile': 65}
+[1792246480827890963..1792246482832417142] pairs=7 distinct=12 total=984 map=88/352 {'write': 89, 'recvfrom': 78, 'openat': 78, 'close': 145, 'epoll_wait': 156, 'accept4': 78, 'sendfile': 67}
+[1792246481829457034..1792246483837894941] pairs=7 distinct=12 total=1028 map=88/352 {'write': 94, 'recvfrom': 81, 'openat': 81, 'close': 149, 'epoll_wait': 162, 'accept4': 81, 'sendfile': 68}
+[1792246482832417142..1792246484838456111] pairs=7 distinct=12 total=976 map=88/352 {'write': 92, 'recvfrom': 78, 'openat': 78, 'close': 142, 'epoll_wait': 156, 'accept4': 78, 'sendfile': 64}
+[1792246483837894941..1792246485859171579] pairs=7 distinct=12 total=458 map=88/352 {'write': 42, 'recvfrom': 37, 'openat': 37, 'close': 69, 'epoll_wait': 74, 'accept4': 37, 'sendfile': 32}
+[1792246484838456111..1792246486861963733] pairs=0 distinct=0 total=0 map=88/352 idle
+[1792246485859171579..1792246487863144918] pairs=0 distinct=0 total=0 map=88/352 idle
+[1792246486861963733..1792246488942790737] pairs=0 distinct=0 total=0 map=88/352 idle
+[1792246487863144918..1792246489952086779] pairs=7 distinct=12 total=319 map=88/352 {'write': 32, 'recvfrom': 26, 'openat': 25, 'close': 46, 'epoll_wait': 52, 'accept4': 26, 'sendfile': 19}
+[1792246488942790737..1792246490954685790] pairs=7 distinct=12 total=709 map=88/352 {'write': 68, 'recvfrom': 57, 'openat': 56, 'close': 103, 'epoll_wait': 114, 'accept4': 56, 'sendfile': 45}
+[1792246489952086779..1792246491956470830] pairs=7 distinct=12 total=775 map=88/352 {'write': 74, 'recvfrom': 62, 'openat': 63, 'close': 112, 'epoll_wait': 124, 'accept4': 62, 'sendfile': 51}
+[1792246490954685790..1792246492967053523] pairs=7 distinct=12 total=649 map=88/352 {'write': 64, 'recvfrom': 52, 'openat': 53, 'close': 92, 'epoll_wait': 104, 'accept4': 53, 'sendfile': 41}
+[1792246491956470830..1792246493968508952] pairs=7 distinct=12 total=503 map=88/352 {'write': 48, 'recvfrom': 40, 'openat': 40, 'close': 72, 'epoll_wait': 80, 'accept4': 40, 'sendfile': 32}
+[1792246492967053523..1792246494977745356] pairs=7 distinct=12 total=565 map=88/352 {'write': 54, 'recvfrom': 45, 'openat': 45, 'close': 81, 'epoll_wait': 90, 'accept4': 45, 'sendfile': 36}
+[1792246493968508952..1792246495979080907] pairs=7 distinct=12 total=694 map=88/352 {'write': 73, 'recvfrom': 56, 'openat': 56, 'close': 95, 'epoll_wait': 112, 'accept4': 56, 'sendfile': 39}
+[1792246494977745356..1792246496979787044] pairs=7 distinct=12 total=483 map=88/352 {'write': 50, 'recvfrom': 39, 'openat': 39, 'close': 67, 'epoll_wait': 78, 'accept4': 39, 'sendfile': 28}
+[1792246495979080907..1792246497981142730] pairs=7 distinct=11 total=115 map=88/352 {'write': 9, 'recvfrom': 9, 'openat': 9, 'close': 18, 'epoll_wait': 18, 'accept4': 9, 'sendfile': 9}
