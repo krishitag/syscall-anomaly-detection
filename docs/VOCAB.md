@@ -1,7 +1,7 @@
 # VOCAB.md — Feature Vocabulary & Resolved Schema Dependencies
 
 **Owner:** Naman Bhatia (24BDS0056), Member 1 (eBPF / in-kernel aggregation)
-**Status:** Resolves 3 of the 4 open dependencies in `docs/naman_krishita_csv_contract.md`.
+**Last updated:** 2026-10-17 (bigrams and sliding windows)
 **Companion to:** `member2/schema.py` (authoritative column list — names unchanged by this document)
 
 ---
@@ -9,13 +9,12 @@
 ## 0. What this document does and does not change
 
 **Does not change:** column count (77), column names (`member2/schema.py` placeholders stand),
-column grouping, or any rule in the CSV contract. Member 2's loader, validator and tests
-require no changes as a result of this document.
+column grouping, or any rule in the CSV contract.
 
-**Does define:** what each placeholder column *means*, so that `syscall_07_count` has an
-agreed referent on both sides of the handoff.
+**Does define:** what each placeholder column *means*, so that `syscall_07_count` and
+`pair_12_count` have an agreed referent on both sides of the handoff.
 
-Renaming placeholder columns to human-readable names is deferred (see §5).
+Renaming placeholder columns to human-readable names is deferred (see §7).
 
 ---
 
@@ -23,16 +22,14 @@ Renaming placeholder columns to human-readable names is deferred (see §5).
 
 **Decision: integer (int64).**
 
-The eBPF program obtains this from `bpf_get_current_cgroup_id()`, which returns the
-**inode number of the container's cgroup v2 directory** under
-`/sys/fs/cgroup/system.slice/docker-<container_id>.scope`. It is a `u64` in the kernel,
-but observed values on the target environment are small (example: `11758`), so int64 is
-safe and no string encoding is needed.
+Obtained from `bpf_get_current_cgroup_id()`, which returns the **inode number of the
+container's cgroup v2 directory** under
+`/sys/fs/cgroup/system.slice/docker-<container_id>.scope`. It is a `u64` in the kernel, but
+observed values are small (e.g. `11242`), so int64 is safe.
 
 **Note for Member 2:** this value is *not stable across container restarts*. A recreated
-container gets a new cgroup directory and therefore a new id. Do not treat `cgroup_id` as a
-persistent container identity across separate capture runs; it identifies a container only
-within one run.
+container gets a new cgroup directory and a new inode. It identifies a container only within
+one capture run.
 
 ---
 
@@ -41,190 +38,240 @@ within one run.
 **Decision: epoch nanoseconds (UTC), stamped in userspace.**
 
 `window_start_ns` and `window_end_ns` are produced by the userspace poller using Python's
-`time.time_ns()` — nanoseconds since the Unix epoch.
+`time.time_ns()`.
 
-Rationale: window boundaries are defined by the poller, not by the kernel — the eBPF program
-has no concept of a window. Epoch time was chosen over `CLOCK_MONOTONIC` because monotonic
-values reset at boot and cannot be correlated with container start times, logs, or the
-labelled attack timeline used for evaluation.
+Rationale: window boundaries are defined by the poller, not the kernel — the eBPF program has
+no concept of a window. Epoch time was chosen over `CLOCK_MONOTONIC` because monotonic values
+reset at boot and cannot be correlated with container start times, logs, or the labelled
+attack timeline used for evaluation.
 
-The kernel-side `bpf_ktime_get_ns()` (monotonic) is used internally to compute inter-arrival
-*durations* for the stat columns. Durations are clock-basis independent, so this does not
-conflict with the above.
+The kernel-side `bpf_ktime_get_ns()` (monotonic) would be used internally for inter-arrival
+*durations*; durations are clock-basis independent, so this does not conflict.
 
 ---
 
 ## 3. Resolved dependency: the 4 aggregate statistics
 
-| Column | Meaning | dtype | Valid range |
-|---|---|---|---|
-| `stat_01` | Mean inter-arrival time between consecutive syscalls, in nanoseconds, for this cgroup within this window | float | `>= 0.0` |
-| `stat_02` | **Standard deviation** of the same inter-arrival times, in nanoseconds | float | `>= 0.0` |
-| `stat_03` | Count of syscalls in this window returning an error (`sys_exit` with `ret < 0`) | int | `>= 0` |
-| `stat_04` | Number of distinct syscalls **from the 20-syscall vocabulary** observed in this window | int | `0 <= x <= 20` |
+| Column | Meaning | dtype | Valid range | Implemented |
+|---|---|---|---|---|
+| `stat_01` | Mean inter-arrival time between consecutive syscalls, ns | float | `>= 0.0` | **No — always 0.0** |
+| `stat_02` | **Standard deviation** of the same inter-arrival times, ns | float | `>= 0.0` | **No — always 0.0** |
+| `stat_03` | Count of syscalls in the window returning an error (`sys_exit` with `ret < 0`) | int | `>= 0` | **No — always 0** |
+| `stat_04` | Number of distinct syscalls from the 20-syscall vocabulary observed in the window | int | `0 <= x <= 20` | Yes |
 
 ### Note on `stat_02` — standard deviation, not variance
 
-Earlier internal notes specified *variance*. This document specifies **standard deviation**
-instead, deliberately.
+Earlier internal notes specified *variance*. This document specifies **standard deviation**,
+deliberately. Variance of nanosecond gaps is in ns², producing values in the 10^12–10^18
+range while count columns sit in the tens or hundreds. Under MSE loss that single column
+would dominate reconstruction error entirely. Standard deviation carries the same information
+in nanoseconds, on a scale comparable to `stat_01`.
 
-Variance of nanosecond gaps is expressed in ns², producing values in the 10^12–10^18 range,
-while every count column sits in the tens or hundreds. Under the autoencoder's MSE loss that
-single column would dominate the reconstruction error almost entirely and the other 73
-features would contribute effectively nothing. Standard deviation carries the same
-information in nanoseconds, on a scale comparable to `stat_01`.
-
-**Abhiram:** input normalisation is still required regardless of this change — `stat_01` and
-`stat_02` remain orders of magnitude larger than the count columns.
+Input normalisation is still required regardless.
 
 ### Edge cases
 
-- A window with fewer than 2 syscalls has no inter-arrival gap to measure.
-  `stat_01` and `stat_02` are written as `0.0` in that case, never blank
-  (per contract §5: blank/NaN is a validity error).
-- `stat_04` counts vocabulary syscalls only. Syscalls outside the 20-syscall vocabulary are
-  not counted anywhere in the feature vector.
+- A window with fewer than 2 syscalls has no inter-arrival gap. `stat_01` and `stat_02` are
+  written as `0.0`, never blank (contract §5: blank/NaN is a validity error).
+- `stat_04` counts vocabulary syscalls only.
 
 ---
 
 ## 4. Syscall vocabulary — columns `syscall_01_count` .. `syscall_20_count`
 
-Index order is **locked**. Do not reorder; downstream column meaning depends on position.
+Index order is **locked**. Syscall numbers are **x86_64**; the mapping is
+architecture-specific and would differ on ARM64.
 
-Syscall numbers are **x86_64**. This mapping is architecture-specific and would differ on
-ARM64.
+Each column counts a **family** of equivalent syscalls, so the feature responds regardless of
+which variant the C library selects. Families group only true variants of the same operation,
+never distinct operations.
 
-| Column | Syscall | x86_64 nr |
+| Column | Family label | Members |
 |---|---|---|
-| `syscall_01_count` | `read` | 0 |
-| `syscall_02_count` | `write` | 1 |
-| `syscall_03_count` | `recvfrom` | 45 |
-| `syscall_04_count` | `openat` | 257 |
-| `syscall_05_count` | `close` | 3 |
-| `syscall_06_count` | `mmap` | 9 |
-| `syscall_07_count` | `munmap` | 11 |
-| `syscall_08_count` | `execve` | 59 |
-| `syscall_09_count` | `epoll_wait` | 232 |
-| `syscall_10_count` | `clone` | 56 |
-| `syscall_11_count` | `connect` | 42 |
-| `syscall_12_count` | `accept4` | 288 |
-| `syscall_13_count` | `socket` | 41 |
-| `syscall_14_count` | `setns` | 308 |
-| `syscall_15_count` | `unshare` | 272 |
-| `syscall_16_count` | `ptrace` | 101 |
-| `syscall_17_count` | `fchmodat` | 268 |
-| `syscall_18_count` | `fchownat` | 260 |
-| `syscall_19_count` | `kill` | 62 |
-| `syscall_20_count` | `sendfile` | 40 |
+| `syscall_01_count` | `read` | read |
+| `syscall_02_count` | `write` | write |
+| `syscall_03_count` | `recvfrom` | recvfrom |
+| `syscall_04_count` | `openat` | open, openat, openat2, creat |
+| `syscall_05_count` | `close` | close |
+| `syscall_06_count` | `mmap` | mmap |
+| `syscall_07_count` | `munmap` | munmap |
+| `syscall_08_count` | `execve` | execve, execveat |
+| `syscall_09_count` | `epoll_wait` | epoll_wait, epoll_pwait, epoll_pwait2 |
+| `syscall_10_count` | `clone` | clone, clone3, fork, vfork |
+| `syscall_11_count` | `connect` | connect |
+| `syscall_12_count` | `accept4` | accept, accept4 |
+| `syscall_13_count` | `socket` | socket |
+| `syscall_14_count` | `setns` | setns |
+| `syscall_15_count` | `unshare` | unshare |
+| `syscall_16_count` | `ptrace` | ptrace |
+| `syscall_17_count` | `fchmodat` | chmod, fchmod, fchmodat, fchmodat2 |
+| `syscall_18_count` | `fchownat` | chown, lchown, fchown, fchownat |
+| `syscall_19_count` | `kill` | kill, tkill, tgkill |
+| `syscall_20_count` | `sendfile` | sendfile |
 
-**Revised 2026-09-21** after the first filtered capture of the nginx demo container. Six slots
-changed, all in place (same column, new syscall):
+Syscall numbers are resolved at runtime from BCC's syscall table (`ebpf/vocab.py`), so a typo
+fails immediately rather than silently counting the wrong call, and the numbers are always
+correct for the running kernel.
 
-| Slot | Was | Now | Reason |
-|---|---|---|---|
-| 03 | `open` | `recvfrom` | `open` never fires on modern glibc; nginx reads requests with `recvfrom` (2 per request) |
-| 09 | `fork` | `epoll_wait` | `fork` is implemented via `clone`; `epoll_wait` is nginx's event loop (3 per request) |
-| 12 | `accept` | `accept4` | confirmed: nginx called `accept4` 200 times for 200 requests, `accept` zero times |
-| 17 | `chmod` | `fchmodat` | coreutils `chmod` issues `fchmodat`, not `chmod` — would have hidden the demo attack |
-| 18 | `chown` | `fchownat` | same reason as `chmod` |
-| 20 | `getpid` | `sendfile` | `getpid` carries no signal; `sendfile` is nginx's response-body path (1 per request) |
+### Why families: calls named in prior work never fire
 
-The resulting vocabulary is split by purpose: normal-behaviour syscalls (`read`, `write`,
-`recvfrom`, `openat`, `close`, `mmap`, `munmap`, `epoll_wait`, `accept4`, `sendfile`) give the
-autoencoder a real baseline to learn, and security-relevant syscalls (`execve`, `clone`,
-`connect`, `socket`, `setns`, `unshare`, `ptrace`, `fchmodat`, `fchownat`, `kill`) stay near zero
-normally and spike under attack. Column count and names are unchanged; Member 2 code is
-unaffected.
+The vocabulary was revised after inspecting real traces. Contemporary glibc routes `open` to
+`openat`, `accept` to `accept4`, `fork` to `clone`, and `chmod` to `fchmodat` — all distinct
+syscall numbers. Counting the named call alone yields a permanently-zero feature. Three of the
+ten security-relevant columns would otherwise have been blind to the evaluated attacks.
 
-Syscall numbers above are to be verified against the target kernel before the tracer is
-considered correct:
+### Purpose split
+
+- **Normal-behaviour syscalls** give the model a baseline: `read`, `write`, `recvfrom`,
+  `openat`, `close`, `mmap`, `munmap`, `epoll_wait`, `accept4`, `sendfile`.
+- **Security-relevant syscalls** stay near zero normally and spike under attack: `execve`,
+  `clone`, `connect`, `socket`, `setns`, `unshare`, `ptrace`, `fchmodat`, `fchownat`, `kill`.
+
+### Known limitation: seccomp-blocked syscalls are invisible
+
+`unshare` recorded **0 occurrences across all 221 windows** of the evaluation capture.
+Confirmed directly:
 
 ```
-grep -E '__NR_(read|write|open|openat|close|mmap|munmap|execve|fork|clone|connect|accept|socket|setns|unshare|ptrace|chmod|chown|kill|getpid) ' \
-  /usr/include/x86_64-linux-gnu/asm/unistd_64.h
+$ docker exec demo unshare --user --map-root-user true; echo "exit=$?"
+unshare: unshare failed: Operation not permitted
+exit=1
 ```
 
-### Known risk: several vocabulary entries may never fire
-
-Modern glibc routes some of these calls through newer variants that are **distinct syscall
-numbers** and therefore will not increment the columns above:
-
-| Vocabulary entry | Likely actually used | Consequence |
-|---|---|---|
-| `open` (2) | `openat` (257) | `syscall_03_count` likely always 0 |
-| `accept` (43) | `accept4` (288) | `syscall_12_count` likely always 0 |
-| `fork` (57) | `clone` (56) | `syscall_09_count` likely always 0 |
-
-A column that is constant zero across every row contributes nothing to the autoencoder — it
-is reconstructed perfectly and carries no signal, effectively reducing the feature vector
-below 74 usable dimensions.
-
-**This is to be confirmed empirically**, not assumed: once the tracer runs against the demo
-container, check which of the 20 columns are non-zero. If the three above are indeed dead,
-the recommended fix is to substitute `accept4`, drop `open`/`fork` in favour of more active
-syscalls, and record the substitution here. Column count and names are unaffected by such a
-substitution — only this table changes.
+Docker's default seccomp profile rejects the call **before the `sys_enter` tracepoint
+executes**, so the attempt produces no observable signal. The `ns_escape` attack was still
+flagged, but via `execve`/`clone` from the `docker exec` wrapper rather than its signature
+syscall. This is a limitation of tracepoint-based collection generally, not of this
+implementation, and belongs in the paper's limitations section.
 
 ---
 
 ## 5. Syscall pair vocabulary — columns `pair_01_count` .. `pair_50_count`
 
-**Status: index→pair mapping deliberately deferred. Column count and names are final.**
+**Status: locked 2026-10-17.**
 
-### Approach
+### How the 50 were chosen
 
-The eBPF program tracks **all 400 ordered pairs** (20 × 20) of the vocabulary above, not 50.
-A 400-entry per-cgroup map costs the same single increment per syscall event as a 50-entry
-map would — the per-event work is identical, only the array being indexed is larger. There is
-no measurable collection-overhead difference, which matters because collection overhead is
-this project's novelty claim.
+The eBPF program counts **all 400 ordered vocabulary transitions** (20 × 20) in kernel space.
+A 400-entry per-cgroup map costs the same single increment per event as a 50-entry map, so
+there is no collection-overhead difference. The userspace poller emits 50 of them as columns.
 
-The **userspace poller** then selects which 50 of the 400 tracked pairs are emitted as CSV
-columns.
+A baseline survey capture (nginx traffic plus the 5 simulated attacks) observed only **33
+distinct vocabulary transitions** — nginx's request loop is highly regular, so the transition
+space is small. The 50 columns are therefore:
 
-### Why this is deferred rather than guessed
+- **Columns 1–33:** every transition observed in the survey, ordered by frequency.
+- **Columns 34–50:** 17 hand-picked process-startup and payload-staging transitions that are
+  plausible during post-exploitation but were absent from the survey.
 
-Selecting 50 pairs before any traffic has been observed means choosing arbitrarily, which is
-not defensible in the report. Selecting after a baseline capture allows the selection to be
-stated as a method: *"the 50 pairs were selected from all 400 observed transitions in
-baseline container traffic."*
+Columns 1–6 reconstruct nginx's request loop directly from kernel data:
+`epoll_wait → recvfrom → openat → sendfile → write → close`.
 
-### Planned selection policy
+| Column | Transition | Survey count |
+|---|---|---|
+| `pair_01_count` | write → close | 306 |
+| `pair_02_count` | epoll_wait → recvfrom | 300 |
+| `pair_03_count` | close → epoll_wait | 300 |
+| `pair_04_count` | epoll_wait → accept4 | 296 |
+| `pair_05_count` | close → close | 267 |
+| `pair_06_count` | sendfile → write | 228 |
+| `pair_07_count` | recvfrom → openat | 131 |
+| `pair_08_count` | mmap → mmap | 87 |
+| `pair_09_count` | read → read | 35 |
+| `pair_10_count` | mmap → close | 34 |
+| `pair_11_count` | close → openat | 32 |
+| `pair_12_count` | openat → read | 25 |
+| `pair_13_count` | read → close | 17 |
+| `pair_14_count` | close → mmap | 11 |
+| `pair_15_count` | connect → close | 10 |
+| `pair_16_count` | socket → connect | 10 |
+| `pair_17_count` | close → socket | 7 |
+| `pair_18_count` | close → write | 4 |
+| `pair_19_count` | mmap → munmap | 3 |
+| `pair_20_count` | read → epoll_wait | 2 |
+| `pair_21_count` | close → read | 2 |
+| `pair_22_count` | write → recvfrom | 2 |
+| `pair_23_count` | epoll_wait → epoll_wait | 2 |
+| `pair_24_count` | openat → mmap | 1 |
+| `pair_25_count` | read → munmap | 1 |
+| `pair_26_count` | munmap → close | 1 |
+| `pair_27_count` | mmap → read | 1 |
+| `pair_28_count` | read → write | 1 |
+| `pair_29_count` | write → read | 1 |
+| `pair_30_count` | epoll_wait → read | 1 |
+| `pair_31_count` | fchmodat → close | 1 |
+| `pair_32_count` | fchownat → close | 1 |
+| `pair_33_count` | munmap → munmap | 1 |
+| `pair_34_count` | clone → execve | 0 (hand-picked) |
+| `pair_35_count` | execve → openat | 0 (hand-picked) |
+| `pair_36_count` | execve → mmap | 0 (hand-picked) |
+| `pair_37_count` | execve → read | 0 (hand-picked) |
+| `pair_38_count` | execve → close | 0 (hand-picked) |
+| `pair_39_count` | execve → write | 0 (hand-picked) |
+| `pair_40_count` | openat → fchmodat | 0 (hand-picked) |
+| `pair_41_count` | openat → fchownat | 0 (hand-picked) |
+| `pair_42_count` | fchmodat → openat | 0 (hand-picked) |
+| `pair_43_count` | read → openat | 0 (hand-picked) |
+| `pair_44_count` | openat → openat | 0 (hand-picked) |
+| `pair_45_count` | openat → close | 0 (hand-picked) |
+| `pair_46_count` | socket → close | 0 (hand-picked) |
+| `pair_47_count` | connect → write | 0 (hand-picked) |
+| `pair_48_count` | connect → read | 0 (hand-picked) |
+| `pair_49_count` | write → write | 0 (hand-picked) |
+| `pair_50_count` | clone → clone | 0 (hand-picked) |
 
-- **40 pairs** — highest-frequency transitions observed in baseline (normal) container traffic.
-- **10 pairs** — hand-selected security-relevant transitions that are rare in normal traffic
-  but expected during anomalous behaviour (e.g. transitions involving `execve`, `ptrace`,
-  `setns`, `unshare`, or `connect` following process creation).
+The authoritative mapping is `ebpf/pairs.json`, regenerable with `ebpf/pick_pairs.py` from a
+survey capture.
 
-Pure top-50-by-frequency is avoided because it selects exclusively for normal behaviour, and
-some transitions most indicative of an intrusion are rare by construction.
+### Known limitation: thread-keyed transitions
 
-Once the baseline capture exists, the resulting index→pair table is appended to this document
-and the selection is then locked.
+Bigrams are tracked **per thread** (the `last_sc` scratch map is keyed by tid), so a
+transition is recorded only when both calls occur in the same thread. This correctly prevents
+interleaved nginx workers from manufacturing spurious pairs, but it means `clone → execve` —
+the canonical process-spawn transition — is never observed, because `clone` returns in the
+parent thread while `execve` runs in the child. Fork/exec sequences are captured by the
+unigram counts only.
 
-### Impact on Member 2: none
+### Observed discriminative power
 
-`PAIR_COUNT_COLUMNS` in `member2/schema.py` remains `pair_01_count` .. `pair_50_count`.
-The loader, validator, mapper and tests are unaffected by which transitions those 50 indices
-ultimately refer to.
+Normal nginx traffic shows ~7 distinct active pair columns per window. Attack windows showed
+19–27. The pair count alone separates attack from normal, independently of the unigrams.
 
 ---
 
-## 6. Still open
+## 6. Windowing
 
-- [ ] **Index→pair mapping for the 50 pair columns** (Naman) — deferred per §5, resolved after
-      baseline capture.
-- [ ] **Empirical confirmation of dead vocabulary columns** (Naman) — per §4, checked on first
-      real capture.
-- [ ] **Renaming placeholder columns to human-readable names** (team) — optional. Deferred
-      until after integration, since it requires a coordinated change on both sides for no
-      functional gain. Required before the report, where `pair_37_count` is not a usable
-      label. Isolated to `member2/schema.py` and this document.
+**As of 2026-10-17, windows slide.** Each row covers a **2-second span**, and a row is emitted
+every **1 second**. Consecutive rows overlap by one second.
+
+Rationale: with fixed non-overlapping windows, an attack straddling a boundary left a trailing
+window containing only its tail, which closely resembled normal traffic. This was the cause of
+the false negatives in the pre-17-Oct evaluation. With overlap, any attack shorter than the
+span falls entirely within at least one window.
+
+**Consequence for modelling:** rows are **not independent samples**. A train/validation split
+must be made **by time**, not randomly, or adjacent overlapping rows leak across the split and
+validation loss is artificially low.
+
+Counts are computed by **differencing snapshots** — kernel counters are never cleared, so no
+event is lost in the gap between reading and resetting.
 
 ---
 
-## 7. Changelog
+## 7. Still open
+
+- [ ] **`stat_01`–`stat_03`** (inter-arrival mean/std, error count) — not implemented; require
+      a `sys_exit` hook and per-thread timestamp tracking. 3 of 74 columns remain constant zero.
+- [ ] **Renaming placeholder columns** to readable names (team decision) — required before the
+      report, where `pair_37_count` is not a usable label. Isolated to `member2/schema.py` and
+      this document.
+
+---
+
+## 8. Changelog
 
 | Date | Change |
 |---|---|
-| 2026-09-20 | Initial version. Resolves `cgroup_id` type, clock basis, and the 4 aggregate statistics. Locks the 20-syscall vocabulary order. Defers the 50-pair index mapping with a stated selection policy. |
+| 2026-09-20 | Initial version. Resolved `cgroup_id` type, clock basis, and the 4 aggregate statistics. Locked the 20-syscall vocabulary order. Deferred the 50-pair mapping. |
+| 2026-09-21 | Revised 6 vocabulary slots after the first real capture (03 → recvfrom, 09 → epoll_wait, 12 → accept4, 17 → fchmodat, 18 → fchownat, 20 → sendfile). Introduced syscall families. |
+| 2026-10-17 | Locked the 50-pair mapping from a survey capture. Switched to sliding 2 s / 1 s windows. Confirmed seccomp blocks `unshare` before the tracepoint. Documented the thread-keying limitation on `clone → execve`. |
