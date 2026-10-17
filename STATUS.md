@@ -1,25 +1,40 @@
 # Project Status
 
-**Last updated:** 16 October 2026 · **Next milestone:** Review 3
+**Last updated:** 17 October 2026 · **Next milestones:** Review 3 (paper + live demo), conference deadline 31 October
 
 Syscall anomaly detection for Docker containers: an eBPF tracer counts a
 container's syscalls inside the kernel, and an autoencoder trained on normal
-traffic flags unusual one-second windows. See [README.md](README.md) for the
+traffic flags unusual windows. See [README.md](README.md) for the
 architecture.
+
+## Current plan: bigrams and sliding windows
+
+The team is adding syscall-pair (bigram) counts and switching to sliding
+windows before Review 3. See [handoff_krishita_retrain.md](handoff_krishita_retrain.md).
+
+| | Before (unigram results) | After (in progress) |
+|---|---|---|
+| Populated features | 21 of 74 | 71 of 74 |
+| Window | 1 s, no overlap | 2 s span, one row every 1 s |
+| Train / validation split | Random | By time (no overlap between the two) |
+| Threshold | 95th percentile | mean + 3σ, plus a precision-recall curve |
+
+This means the model, scaler, threshold and every paper number change. The
+current results are kept as the unigram baseline (`data/*_unigram.csv`).
 
 ## At a glance
 
 | Area | Owner | Status |
 |---|---|---|
-| eBPF collection, workloads, datasets, benchmark | Naman | ✅ Done for Review 3 · 2 checks pending |
-| Data contract, pipeline, labels, integration, docs | Krishita | ✅ Done for Review 3 |
-| Autoencoder model, training, detection | Abhiram | ✅ Done for Review 3 · threshold choice open |
-| Paper | Team | ✅ Drafted · depends on the unshare check |
+| eBPF collection, bigrams, sliding windows, new captures | Naman | 🟠 In progress |
+| Data pipeline, retraining, evaluation, baselines | Krishita | ✅ Code ready · waiting for new data |
+| Original autoencoder model | Abhiram | ✅ Done (retraining handed over to Krishita) |
+| Paper | Team | 🟠 Evaluation section waits on the retrain |
 
-**Headline result:** on `data/eval.csv` (221 windows, 12 attack windows), the
-committed model scores TP 8, FP 8, TN 201, FN 4. That is precision 0.500,
-recall 0.667, F1 0.571 and FPR 0.038, with 5 of 5 attacks detected. Mean
-detection delay is 0.76 s and the maximum is 1.04 s.
+**Unigram baseline result** (to be replaced): on the old `eval.csv` (221
+windows, 12 attack windows), TP 8, FP 8, TN 201, FN 4. That is precision
+0.500, recall 0.667, F1 0.571 and FPR 0.038, with 5 of 5 attacks detected.
+Mean detection delay is 0.76 s and the maximum is 1.04 s.
 
 ---
 
@@ -35,12 +50,11 @@ detection delay is 0.76 s and the maximum is 1.04 s.
 | 1-second windowed tracer, writing the agreed 77-column CSV | `ebpf/tracer.py` |
 | 20-syscall vocabulary, revised after the first real capture | `ebpf/vocab.py`, `docs/VOCAB.md` |
 | Normal traffic generator and 5 simulated attacks (with a 5 s timeout per attack) | `workload/` |
-| Training capture: 628 windows of nginx traffic | `data/normal.csv` |
-| Evaluation capture: 221 windows and the attack log | `data/eval.csv`, `data/attack_log.csv` |
+| Unigram captures: training (628 windows) and evaluation (221 windows + attack log) | `data/` |
 | Overhead benchmark: naive per-event tracer vs. in-kernel tracer | `bench.py`, `ebpf/naive_tracer.py`, `data/bench.jsonl` |
 | Per-attack detection delay and unshare analysis | `analyze.py` |
 | Live demo watcher: prints NORMAL / ALERT for each window | `demo/watch.py` |
-| Handoff and status notes | `docs/naman_handoff_2026-09-22.md` |
+| Retraining handoff | `handoff_krishita_retrain.md` |
 
 **Key findings:**
 - Per-event export costs 72.8% of nginx throughput (3.7× slowdown, 3.9× p50 latency).
@@ -50,72 +64,75 @@ detection delay is 0.76 s and the maximum is 1.04 s.
 
 | Item | Why it matters | Priority |
 |---|---|---|
-| Run the `unshare` check in the demo container | "Operation not permitted" confirms seccomp. "Command not found" means ns_escape never ran, and the results must be redone without it | 🔴 Before submission |
-| Rerun all 3 benchmark conditions in one session, confirming the naive tracer is attached each time, and append the results to `bench.jsonl` | One naive run (1022 rps) was faster than no tracing. It stays in the raw data, and the paper explains why it was excluded | 🟠 Before Review 3 |
+| Bigram counting and sliding windows in the tracer | Needed for the 71-feature model | 🔴 Blocks retraining |
+| New `normal.csv` (at least 10 min), `eval.csv` and `attack_log.csv`; keep old ones as `*_unigram.csv` | Retraining and every paper number depend on them | 🔴 Blocks retraining |
+| Pair mapping for the 50 pair columns | Needed to interpret bigram features | 🔴 With the new captures |
+| Run the `unshare` check in the demo container | "Operation not permitted" confirms seccomp. "Command not found" means ns_escape never ran | 🔴 Before submission |
+| Rerun all 3 benchmark conditions in one session, confirming the naive tracer is attached, and append to `bench.jsonl` | One naive run (1022 rps) was faster than no tracing. It stays in the raw data, and the paper explains why it was excluded | 🟠 Before Review 3 |
 | Measure distinct and total syscalls per window | Requested for the paper | 🟡 Planned |
-| Syscall-pair (bigram) counting and `stat_01`–`stat_03` | Not for Review 3: adding them would invalidate the model and every result | ⚪ Future work |
+| `stat_01`–`stat_03` (timing and error statistics) | Still not implemented | ⚪ Future work |
 | Overhead on bare metal | The VM varies by about ±14% between runs | ⚪ Future work |
 
 ---
 
-## Krishita: data pipeline and integration (Member 2)
+## Krishita: data pipeline, retraining and evaluation (Member 2)
 
-**Owns:** `member2/`, `tests/`, the CSV contract, README and docs, the repository
+**Owns:** `member2/`, `tests/`, retraining and evaluation in `person3_ml/`, the CSV contract, README and docs, the repository
 
 ### Done
 
 | Work | Where |
 |---|---|
-| CSV contract agreed with Naman: 77 columns, row rules, metadata types | `docs/naman_krishita_csv_contract.md` |
+| CSV contract agreed with Naman (now allows overlapping sliding windows) | `docs/naman_krishita_csv_contract.md` |
 | Feature schema: one column list shared by the tracer, validator and model | `member2/schema.py` |
 | 6-stage pipeline: load → validate → map columns → separate metadata → build `X` | `member2/` |
 | Mock data generator for development before real data existed | `member2/mock_aggregated_csv.py` |
 | Real-data integration: Naman's CSV passes with no code changes | `member2/pipeline.py` |
 | Stricter validation for the resolved rules (`cgroup_id` type, statistic ranges) | `member2/validation.py` |
-| Evaluation labelling from the attack log, including attacks that cross a window boundary | `member2/evaluation_labels.py` |
+| Evaluation labelling from the attack log, including overlapping windows | `member2/evaluation_labels.py` |
 | Single-window preparation for the live demo (`prepare_window`) | `member2/pipeline.py` |
-| Model integration: `score_window`, `anomaly_threshold` and the evaluation script | `person3_ml/detect.py`, `person3_ml/evaluate.py` |
+| Live scoring functions: `score_window`, `anomaly_threshold` | `person3_ml/detect.py` |
+| Retraining code: time-based split, mean + 3σ threshold (p95/p99 saved for comparison) | `person3_ml/train.py` |
+| Evaluation of every paper number in one run, plus PR and ROC curves | `person3_ml/evaluate.py` |
+| Baselines on identical features: Isolation Forest, One-Class SVM | `person3_ml/baselines.py` |
+| Dry run of retrain → evaluate → baselines on the unigram data | Works end to end |
 | 18 automated tests (18/18 pass), including a sample of real data | `tests/` |
 | README with architecture, contract, schema and handoff docs | `README.md`, `docs/` |
-| Independent check of all evaluation and benchmark numbers against the data | All paper values match |
-| Threshold sensitivity analysis and baselines (Isolation Forest, One-Class SVM) | Results shared with the team (not committed) |
+| Independent check of all unigram evaluation and benchmark numbers | All paper values match |
 | Repository maintenance and merging both integration PRs | PR #1, PR #2 |
 
 ### Pending
 
 | Item | Priority |
 |---|---|
-| If the unshare check says "command not found": use the prepared results that exclude window 90 (220 windows, TP 7, FP 8, TN 201, FN 4, precision 0.467, recall 0.636, FPR 0.038, 4/4 attacks) | 🔴 Only if needed |
+| Retrain on the new `normal.csv` (`python3 -m person3_ml.train data/normal.csv`) | 🔴 When Naman's data lands |
+| Evaluate and run baselines on the new `eval.csv`; send all numbers for the paper | 🔴 After retraining |
+| Check the new captures pass validation and the attack windows are labelled correctly | 🔴 When Naman's data lands |
+| Update README results and the test fixture for the new data | 🟠 After retraining |
 | Rename placeholder columns (`pair_37_count`, etc.) to readable names (team decision) | ⚪ Future work |
 
 ---
 
 ## Abhiram: anomaly model (Member 3)
 
-**Owns:** `person3_ml/` (model, training, detection, plots)
+**Owns:** the autoencoder design in `person3_ml/`
 
 ### Done
 
 | Work | Where |
 |---|---|
 | Autoencoder: 74 → 64 → 32 → 8 → 32 → 64 → 74 | `person3_ml/autoencoder.py` |
-| Scaler fitted on normal training data only | `person3_ml/preprocessing.py` |
-| Training: 100 epochs, 503 training / 125 validation windows, seed 42 | `person3_ml/train.py` |
-| Trained model, scaler and threshold (95th percentile = 0.0015323) | `person3_ml/models/` |
+| Scaler that handles constant-zero columns | `person3_ml/preprocessing.py` |
+| Original training pipeline and unigram model (100 epochs, 95th-percentile threshold) | `person3_ml/train.py`, `person3_ml/models/` |
 | Batch detection script | `person3_ml/detect.py` |
 | Training-loss and reconstruction-error plots | `person3_ml/plot_results.py`, `person3_ml/results/` |
 
-**Key numbers:**
-- Final training loss 0.000270, validation loss 0.000323.
-- Scoring takes about 0.14 ms per window.
+**Unigram model numbers:** final training loss 0.000270, validation loss
+0.000323; scoring takes about 0.14 ms per window.
 
 ### Pending
 
-| Item | Why it matters | Priority |
-|---|---|---|
-| Decide the threshold | The 95th percentile flags about 4% of normal windows (about 1 false ALERT every 26 s in the demo). The 99th percentile or mean + 3σ would cut FPR to 0.014 with the same recall | 🟠 Before demo |
-| Note library versions | The scaler was saved with scikit-learn 1.9.1, and the results reproduce exactly with 1.6.1 | 🟡 For the paper |
-| Retrain if bigrams are added later | The current model only fits the 21-feature data | ⚪ Future work |
+Retraining has been handed over to Krishita. No open items.
 
 ---
 
@@ -123,9 +140,10 @@ detection delay is 0.76 s and the maximum is 1.04 s.
 
 | Decision | Outcome |
 |---|---|
-| Bigrams before Review 3? | **No.** The paper reports a 74-dimensional input with 21 populated features. Bigrams are designed but not evaluated. |
-| Headline threshold | **95th percentile.** Other thresholds appear only as sensitivity analysis, since they were checked after seeing the eval results. |
-| Demo false alerts | **Explain upfront** if one appears: about 4% of normal windows are flagged at this threshold. |
+| Bigrams before Review 3? | **Yes.** Bigram counts and sliding windows are being added. The unigram results stay as a baseline. |
+| Threshold | **mean + 3σ** of normal validation error, reported with a precision-recall curve. The 95th and 99th percentiles are shown for comparison. |
+| Train / validation split | **By time.** Sliding windows overlap, so a random split would put near-duplicate rows on both sides. |
+| Retraining owner | **Krishita**, taking over from Abhiram. |
 
 ## Demo checklist
 
@@ -137,3 +155,6 @@ detection delay is 0.76 s and the maximum is 1.04 s.
 4. Terminal 3: `python3 workload/normal_traffic.py demo 600`
 5. Trigger an attack, e.g. `bash workload/attack.sh demo`. Expect an ALERT
    within about 1 s.
+
+The demo needs the retrained model. The current model does not fit
+sliding-window data.
