@@ -1,6 +1,6 @@
 # Project Status
 
-**Last updated:** 17 October 2026 · **Next milestone:** Review 3 · **Paper due:** 31 Oct (ICCIDSDT-2027)
+**Last updated:** 17 October 2026 (evening) · **Next milestone:** Review 3 · **Paper due:** 31 Oct (ICCIDSDT-2027)
 
 Syscall anomaly detection for Docker containers: an eBPF tracer counts a
 container's syscalls inside the kernel, and an autoencoder trained on normal
@@ -74,7 +74,7 @@ and `python3 -m person3_ml.baselines data/normal.csv data/eval.csv data/attack_l
 
 | Area | Owner | Status |
 |---|---|---|
-| eBPF collection, workloads, datasets, benchmark | Naman | ✅ Bigrams, sliding windows, microbenchmark done · demo rehearsal and 2 reruns pending |
+| eBPF collection, workloads, datasets, benchmark | Naman | ✅ All benchmark items done · one clean demo pass pending |
 | Data pipeline, retraining, evaluation, baselines | Krishita | ✅ Retrained and evaluated on the new data |
 | Original autoencoder model | Abhiram | ✅ Done (retraining handed over to Krishita) |
 | Paper | Team | 🟠 Update evaluation section with the current results |
@@ -104,19 +104,38 @@ and `python3 -m person3_ml.baselines data/normal.csv data/eval.csv data/attack_l
 | Live demo watcher: prints NORMAL / ALERT per window with triggering syscalls | `demo/watch.py` |
 | `unshare` check run: "Operation not permitted", so seccomp is confirmed | — |
 | Retrain handoff | `handoff_krishita_retrain.md` |
+| **Unigram vs bigram ablation** on the microbenchmark (unigram tracer recovered from `879595a`) | `bench/run_all.sh`, `ebpf/tracer_unigram.py`, `bench/results.csv` |
+| **`collector_stats` fixed** (reads the tracer's Python process, not the `sudo` wrapper) and rerun | `bench/run_all.sh` |
+| **nginx throughput rerun on the bigram tracer**, attachment checked, appended to `bench.jsonl` | `bench/run_nginx.sh`, `data/bench.jsonl` |
+| **Distinct / total syscalls per window and map size per read** | `bench/window_stats.sh`, `bench/window_stats.log` |
+| One-terminal demo launcher, and a kill switch for every script | `demo/run_demo.sh`, `kill.sh` |
+| Benchmarks now unpin the container on exit (pinning caused the demo false alerts, see Findings) | `bench/run_all.sh` |
 
 ### Findings
 
-- **The in-kernel tracer adds 405 ns per syscall** (median 1,037.73 vs 632.59 ns
-  on a `getpid` loop, 1.64×). Per-event export adds 566,136 ns (896×). Measured
-  on the bigram tracer; see [results.md](results.md).
-- **Per-event export costs 72.8% of nginx throughput** (472.0 → 128.3 rps over
-  10-run sets, 3.7× slowdown, 3.9× p50 latency). Measured on the unigram tracer;
-  needs a rerun on the bigram tracer.
-- **The in-kernel tracer's overhead is below measurement resolution on this VM.**
-  Across 3- and 10-run sets the traced/untraced difference fell inside run-to-run
-  variance (σ ≈ 50–68 rps on a ~470 rps mean, ±14%), and in one set traced measured
-  *faster*. Reported as "below resolution" rather than as a precise figure.
+- **The bigram tracer adds ~356 ns per syscall (1.70×)**; the unigram-only tracer
+  adds ~220 ns (1.44×), so **bigram tracking costs ~136 ns, about 38% of the total**.
+  Same session, same baseline (505.25 ns). The morning session measured +405 ns for
+  the bigram tracer, ~12% apart, within session-to-session VM variation. Per-event
+  export: ~896× per syscall. See [results.md](results.md).
+- **Per-event export costs 73.4% of nginx throughput on the bigram tracer**
+  (508.2 → 135.1 rps, 3.76× slowdown, 4.0× p50 latency), matching 72.8% on the
+  unigram tracer. Consistent across both sessions.
+- **The in-kernel tracer's nginx overhead is below measurement resolution, replicated.**
+  In both sessions the traced mean came out slightly *higher* than untraced
+  (σ 51–145 rps). The microbenchmark is what resolves its cost.
+- **Collector:** CPU decays from ~19% to ~3% over a run (`ps` lifetime average,
+  dominated by BCC compilation); RSS ~112 MB is BCC's embedded LLVM, not the maps.
+  Neither should be cited without that context.
+- **Map read size is bounded:** at most 88 unigram + 352 bigram entries, ~6.7 KB per
+  read. The byte advantage over per-event export only appears above ~420 syscalls/s;
+  at nginx's median rate the advantage is fewer crossings and callbacks, not bytes.
+- **Per 2 s window:** median 12 (max 77) distinct syscalls and 544 (max 4,214) total.
+  88 distinct syscalls appeared over the run, which supports a larger vocabulary.
+- **CPU pinning breaks the model.** The microbenchmark pinned the container to one CPU
+  and left it pinned; the next demo raised ~24 false alerts, all during busy and burst
+  traffic. Unpinning fixed the cause. The model is tied to the container's CPU
+  allotment at capture time, which belongs in the paper's limitations.
 - **One 10-run naive set (1022 rps) is excluded.** It is faster than no tracing,
   so the tracer was most likely not attached. It stays in `bench.jsonl`, and the
   paper explains the exclusion.
@@ -135,13 +154,11 @@ and `python3 -m person3_ml.baselines data/normal.csv data/eval.csv data/attack_l
 
 | Item | Why it matters | Priority |
 |---|---|---|
-| Pull `main` on the VM and rehearse the live demo with the retrained model | Nobody has run it end to end since the retrain. The VM has scikit-learn 1.7.2; the model was saved with 1.6.1 | 🔴 Before Review 3 |
-| Fix `collector_stats` in `bench/run_all.sh` and rerun | It measures the `sudo` helper process, not the tracer (0.0% CPU, ~2.4 MB for both tracers). Don't cite those columns until fixed | 🟠 Before Review 3 |
-| Re-run nginx throughput on the bigram tracer, confirming attachment, and append to `bench.jsonl` | Current throughput figures are from the unigram tracer | 🟠 Before Review 3 |
-| Unigram-only microbenchmark (tracer from commit `879595a`) | Shows how much of the 405 ns the bigrams cost. About 3 minutes | 🟡 Strong for the paper |
-| Event loss under a faster consumer and workload | The measured 0% loss doesn't show per-event export is lossless: the slow consumer throttled the workload | 🟡 Strong for the paper |
-| Distinct and total syscalls per window | Requested for the paper | 🟡 Planned |
+| One clean demo pass with the container unpinned | Demo rehearsed with the retrained model: attack scored 111–120 vs normal ≤0.01, alert named `execve clone fchmodat`. The second run raised false alerts under load; root cause was CPU pinning left by the benchmark, now fixed but not yet re-verified | 🔴 Before Review 3 |
 | Update the kernel version in the paper draft (6.8.0-138, not 134) | The VM updated | 🟡 For the paper |
+| Steady-state collector CPU (`pidstat -p <pid> 1`) | `ps %cpu` is a lifetime average dominated by startup | 🟡 For the paper |
+| Event loss under a faster consumer and workload | The measured 0% loss doesn't show per-event export is lossless: the slow consumer throttled the workload | ⚪ Future work |
+| Batched map reads (`BPF_MAP_LOOKUP_BATCH`) | BCC's `.items()` costs ~2 `bpf()` calls per entry, ~880 per read | ⚪ Future work |
 | `stat_01`–`stat_03` (inter-arrival mean/std, error count) | Still zero. Needs a `sys_exit` hook and timestamp tracking | ⚪ Future work |
 | Overhead on bare metal | The VM varies by about ±14% between runs | ⚪ Future work |
 
@@ -214,7 +231,7 @@ Retraining was handed over to Krishita and is done. Open item:
 |---|---|
 | Bigrams before Review 3? | **Yes, reversed 17 Oct.** Implemented with sliding windows; both datasets recaptured. The paper describes 74 features with 71 populated. |
 | Sliding windows? | **Yes.** An attack crossing a window boundary lands whole in at least one window. Costs row independence, which the paper must acknowledge. |
-| How the 50 pairs were chosen | **33 transitions observed in a survey capture of nginx traffic plus the 5 simulated attacks, plus 17 hand-picked post-exploitation transitions.** The survey included attack traffic, so the paper must say so. Normal traffic alone shows only 7 transitions. Zeroing the attack-informed columns leaves detection unchanged (5/5, FP 0). **Open:** keep and disclose, or re-pick from normal-only traffic (needs both captures redone and a retrain). |
+| How the 50 pairs were chosen | **33 transitions observed in a survey capture of nginx traffic plus the 5 simulated attacks, plus 17 hand-picked post-exploitation transitions.** The survey included attack traffic, so the paper must say so. Normal traffic alone shows only 7 transitions. Zeroing the attack-informed columns leaves detection unchanged (5/5, FP 0). **Naman's position: keep and disclose**, since detection doesn't depend on those columns; re-picking would need both captures redone and a retrain. Needs team sign-off. |
 | Headline threshold | **mean + 3σ** of normal validation error, with the PR curve and the p95/p99 points for comparison. |
 | Train / validation split | **By time.** Sliding windows overlap, so a random split would put near-duplicate rows on both sides. |
 | Retraining owner | **Krishita**, taking over from Abhiram. |
@@ -229,19 +246,20 @@ Retraining was handed over to Krishita and is done. Open item:
 - **4 vCPU, ~6 GB RAM**
 - Docker, cgroup v2, BCC (`python3-bpfcc`), x86_64 only (syscall numbers are
   architecture-specific)
-- Demo container: `docker run -d --name demo nginx`
+- Demo container: `docker run -d --name demo nginx`, **unpinned** (`docker update --cpuset-cpus 0-3 demo`). The microbenchmark pins it to CPU 2 and restores it on exit; the model was trained on unpinned captures
 - Model training: Python 3.9, torch 2.8.0, scikit-learn 1.6.1
 
 ## Demo checklist
 
-1. `docker start demo` (or `docker run -d --name demo nginx` the first time)
-2. Terminal 1: `python3 demo/watch.py data/live.csv`. **Start this first**: it waits
-   for the file, so it doesn't replay old rows all at once.
-3. Terminal 2: `sudo python3 ebpf/tracer.py demo data/live.csv`. Wait for the
-   watcher to print the threshold.
-4. Terminal 3: `python3 workload/normal_traffic.py demo 600`
-5. Trigger an attack: `bash workload/attack.sh demo`. Expect an ALERT within
-   about 1 s.
+1. Check the container is unpinned: `docker inspect -f '{{.HostConfig.CpusetCpus}}' demo`
+   should print `0-3` (or nothing).
+2. Terminal 1: `bash demo/run_demo.sh`. It starts the tracer and traffic in the background
+   and shows the watcher. Rows appear after ~10 s.
+3. Traffic uses seed 7: burst at ~25 s, busy ~50–70 s. Wait until ~75 s.
+4. Terminal 2: `docker exec demo sh -c 'cp /bin/ls /tmp/.x && chmod +x /tmp/.x && /tmp/.x /'`.
+   Expect an ALERT within about 1 s naming `execve clone fchmodat`.
+5. If anything won't stop: `bash kill.sh` from any terminal. Background `sudo` can leave the
+   terminal in raw mode (Ctrl+C stops working); `stty sane` or `kill.sh` restores it.
 
 The demo uses the retrained model in `person3_ml/models/`. Pull `main` on the
 VM before the demo.
