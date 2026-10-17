@@ -76,7 +76,7 @@ and `python3 -m person3_ml.baselines data/normal.csv data/eval.csv data/attack_l
 |---|---|---|
 | eBPF collection, workloads, datasets, benchmark | Naman | ✅ All benchmark items done · demo verified |
 | Data pipeline, retraining, evaluation, baselines | Krishita | ✅ Retrained and evaluated on the new data |
-| Original autoencoder model | Abhiram | ✅ Done (retraining handed over to Krishita) |
+| Original autoencoder model | Abhiram | ✅ Done |
 | Paper | Team | 🟠 Update evaluation section with the current results |
 
 ---
@@ -196,7 +196,6 @@ and `python3 -m person3_ml.baselines data/normal.csv data/eval.csv data/attack_l
 
 | Item | Priority |
 |---|---|
-| Retrain and re-evaluate if the team re-picks the pairs from normal-only traffic | 🟠 Only if decided |
 | Rename placeholder columns (`pair_37_count` → readable) | ⚪ Future work |
 
 ---
@@ -214,14 +213,13 @@ and `python3 -m person3_ml.baselines data/normal.csv data/eval.csv data/attack_l
 | Original training pipeline and unigram model (100 epochs, seed 42) | `person3_ml/train.py`, `person3_ml/models_unigram/` |
 | Batch detection script | `person3_ml/detect.py` |
 | Training-loss and reconstruction-error plots | `person3_ml/plot_results.py` |
+| Independent rerun of the retrained model's evaluation on Windows: all results reproduce | `person3_ml/results/` |
+| Signed off on keeping the 50 pairs and disclosing how they were chosen | Team decisions |
+| Library versions recorded: retrained model uses scikit-learn 1.6.1 and torch 2.8.0, pinned in `requirements-ml.txt` | `requirements-ml.txt` |
 
 ### Pending
 
-Retraining was handed over to Krishita and is done. Open item:
-
-| Item | Why it matters | Priority |
-|---|---|---|
-| Note library versions | Old scaler saved with scikit-learn 1.9.1; reproduces with 1.6.1; VM has 1.7.2 and warns. The retrained model was trained with scikit-learn 1.6.1 and torch 2.8.0 | 🟡 For the paper |
+None.
 
 ---
 
@@ -231,7 +229,7 @@ Retraining was handed over to Krishita and is done. Open item:
 |---|---|
 | Bigrams before Review 3? | **Yes, reversed 17 Oct.** Implemented with sliding windows; both datasets recaptured. The paper describes 74 features with 71 populated. |
 | Sliding windows? | **Yes.** An attack crossing a window boundary lands whole in at least one window. Costs row independence, which the paper must acknowledge. |
-| How the 50 pairs were chosen | **33 transitions observed in a survey capture of nginx traffic plus the 5 simulated attacks, plus 17 hand-picked post-exploitation transitions.** The survey included attack traffic, so the paper must say so. Normal traffic alone shows only 7 transitions. Zeroing the attack-informed columns leaves detection unchanged (5/5, FP 0). **Naman's position: keep and disclose**, since detection doesn't depend on those columns; re-picking would need both captures redone and a retrain. Needs team sign-off. |
+| How the 50 pairs were chosen | **33 transitions observed in a survey capture of nginx traffic plus the 5 simulated attacks, plus 17 hand-picked post-exploitation transitions.** The survey included attack traffic, so the paper must say so. Normal traffic alone shows only 7 transitions. Zeroing the attack-informed columns leaves detection unchanged (5/5, FP 0). **Decision: keep and disclose** (agreed by Naman, Krishita and Abhiram), since detection doesn't depend on those columns; re-picking would need both captures redone and a retrain. |
 | Headline threshold | **mean + 3σ** of normal validation error, with the PR curve and the p95/p99 points for comparison. |
 | Train / validation split | **By time.** Sliding windows overlap, so a random split would put near-duplicate rows on both sides. |
 | Retraining owner | **Krishita**, taking over from Abhiram. |
