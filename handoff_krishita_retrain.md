@@ -1,4 +1,4 @@
-# Handoff → Abhiram: retraining required after collection-layer changes
+# Handoff → Krishita: retraining required after collection-layer changes
 
 **From:** Naman (Member 1, eBPF collection)
 **Date:** 2026-10-17
@@ -73,7 +73,7 @@ That one change is likely the single biggest improvement to how the results read
 
 ### 3.3 Numbers for the paper
 
-Krishita asked for these and they're still outstanding:
+Needed for the paper, recomputed on the new data:
 
 1. Full evaluation output: TP, FP, TN, FN, precision, recall, F1, FPR, threshold used
 2. Per attack: how many of its windows were flagged

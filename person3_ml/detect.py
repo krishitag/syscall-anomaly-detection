@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from functools import lru_cache
 from pathlib import Path
 
@@ -32,7 +33,13 @@ from member2.pipeline import prepare_aggregated_csv
 from .autoencoder import SyscallAutoencoder
 
 
-MODELS_DIR = Path(__file__).resolve().parent / "models"
+# Set SYSCALL_MODELS_DIR to score with a different trained model.
+MODELS_DIR = Path(
+    os.environ.get(
+        "SYSCALL_MODELS_DIR",
+        Path(__file__).resolve().parent / "models",
+    )
+)
 
 
 def load_artifacts():

@@ -47,9 +47,11 @@ honor what's written here.
   for the same container+window.
 - Krishita's pipeline does not merge, split, re-window, or otherwise
   aggregate rows. Aggregation is entirely Naman's responsibility, performed
-  in-kernel before the CSV is produced. If two rows describe overlapping or
-  duplicate windows for the same container, that is treated as an invalid
-  input, not something the pipeline resolves.
+  in-kernel before the CSV is produced.
+- Windows for the same container **may overlap**. The tracer emits a sliding
+  window (2 s span, one row every 1 s), so consecutive rows share one second
+  of data. Two rows with the same `(cgroup_id, window_start_ns)` are still
+  invalid.
 - Rows for different containers may be interleaved in any order; the
   pipeline does not assume the file is sorted by container or by time.
 

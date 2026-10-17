@@ -82,10 +82,10 @@ def label_windows(
 ) -> NDArray[np.int64]:
     """Return 1 for each window that overlaps any attack, otherwise 0.
 
-    Consecutive tracer windows share a boundary (one window's end is the next
-    one's start), so a window covers ``[start, end)``.  An attack that starts
-    exactly on a boundary therefore labels only the window it starts in.  An
-    attack that straddles a boundary labels both windows.  The attack log has
+    A window covers ``[start, end)``, so an attack that starts exactly at one
+    window's end does not label that window.  An attack labels every window it
+    overlaps: with sliding windows (2 s span, one row per second) that is
+    usually two or more windows per attack.  The attack log has
     no ``cgroup_id``, so every container's window in that time range is
     labelled.
 
