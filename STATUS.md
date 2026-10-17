@@ -74,7 +74,7 @@ and `python3 -m person3_ml.baselines data/normal.csv data/eval.csv data/attack_l
 
 | Area | Owner | Status |
 |---|---|---|
-| eBPF collection, workloads, datasets, benchmark | Naman | ✅ Bigrams, sliding windows, microbenchmark done · demo rehearsal and 2 reruns pending |
+| eBPF collection, workloads, datasets, benchmark | Naman | ✅ Bigrams + sliding windows done · benchmarks need re-running |
 | Data pipeline, retraining, evaluation, baselines | Krishita | ✅ Retrained and evaluated on the new data |
 | Original autoencoder model | Abhiram | ✅ Done (retraining handed over to Krishita) |
 | Paper | Team | 🟠 Update evaluation section with the current results |
@@ -99,7 +99,6 @@ and `python3 -m person3_ml.baselines data/normal.csv data/eval.csv data/attack_l
 | Training capture: **585 windows**, 10 min nginx traffic, no attacks | `data/normal.csv` |
 | Evaluation capture: **189 windows**, traffic (seed 99) + 5 attacks | `data/eval.csv`, `data/attack_log.csv` |
 | Overhead benchmark harness + naive per-event tracer as the comparison baseline | `bench.py`, `ebpf/naive_tracer.py`, `data/bench.jsonl` |
-| Per-syscall cost microbenchmark (`getpid` loop in the container), 3 conditions in one session, attachment checked | `bench/`, `results.md` |
 | Per-attack detection delay and `unshare` analysis | `analyze.py` |
 | Live demo watcher: prints NORMAL / ALERT per window with triggering syscalls | `demo/watch.py` |
 | `unshare` check run: "Operation not permitted", so seccomp is confirmed | — |
@@ -107,9 +106,6 @@ and `python3 -m person3_ml.baselines data/normal.csv data/eval.csv data/attack_l
 
 ### Findings
 
-- **The in-kernel tracer adds 405 ns per syscall** (median 1,037.73 vs 632.59 ns
-  on a `getpid` loop, 1.64×). Per-event export adds 566,136 ns (896×). Measured
-  on the bigram tracer; see [results.md](results.md).
 - **Per-event export costs 72.8% of nginx throughput** (472.0 → 128.3 rps over
   10-run sets, 3.7× slowdown, 3.9× p50 latency). Measured on the unigram tracer;
   needs a rerun on the bigram tracer.
@@ -135,11 +131,10 @@ and `python3 -m person3_ml.baselines data/normal.csv data/eval.csv data/attack_l
 
 | Item | Why it matters | Priority |
 |---|---|---|
-| Pull `main` on the VM and rehearse the live demo with the retrained model | Nobody has run it end to end since the retrain. The VM has scikit-learn 1.7.2; the model was saved with 1.6.1 | 🔴 Before Review 3 |
-| Fix `collector_stats` in `bench/run_all.sh` and rerun | It measures the `sudo` helper process, not the tracer (0.0% CPU, ~2.4 MB for both tracers). Don't cite those columns until fixed | 🟠 Before Review 3 |
-| Re-run nginx throughput on the bigram tracer, confirming attachment, and append to `bench.jsonl` | Current throughput figures are from the unigram tracer | 🟠 Before Review 3 |
-| Unigram-only microbenchmark (tracer from commit `879595a`) | Shows how much of the 405 ns the bigrams cost. About 3 minutes | 🟡 Strong for the paper |
-| Event loss under a faster consumer and workload | The measured 0% loss doesn't show per-event export is lossless: the slow consumer throttled the workload | 🟡 Strong for the paper |
+| Re-run all 3 benchmark conditions in one session on the bigram tracer, confirming the naive tracer is attached each time; append to `bench.jsonl` | Bigrams add ~2 map operations per event, so the current overhead figures understate the shipped system | 🔴 Before Review 3 |
+| ns/syscall microbenchmark (tight `getpid` loop, in-container) | nginx throughput is variance-limited; a syscall-only loop resolves the per-event cost directly | 🟠 Before Review 3 |
+| Event-loss measurement on the naive tracer under load | Per-event export drops events under load; in-kernel aggregation cannot. A correctness argument, not just a speed one | 🟠 Strong for the paper |
+| Collector CPU% and RSS during a run | Requested for the paper | 🟡 Planned |
 | Distinct and total syscalls per window | Requested for the paper | 🟡 Planned |
 | Update the kernel version in the paper draft (6.8.0-138, not 134) | The VM updated | 🟡 For the paper |
 | `stat_01`–`stat_03` (inter-arrival mean/std, error count) | Still zero. Needs a `sys_exit` hook and timestamp tracking | ⚪ Future work |
@@ -169,17 +164,16 @@ and `python3 -m person3_ml.baselines data/normal.csv data/eval.csv data/attack_l
 | **Baselines** on identical features: Isolation Forest, One-Class SVM | `person3_ml/baselines.py` |
 | Pair-selection check: results unchanged with the attack-informed pair columns zeroed | See Current results |
 | Unigram model, results and attack log preserved | `person3_ml/*_unigram/`, `data/attack_log_unigram.csv` |
-| Error-over-time plot for the evaluation capture | `person3_ml/plot_timeline.py`, `person3_ml/results/eval_error_timeline.png` |
-| Library versions pinned to the ones the model was trained with | `requirements-ml.txt` |
-| 22 automated tests (22/22 pass), including real unigram and sliding-window samples | `tests/` |
-| README updated for bigrams, sliding windows and current results | `README.md` |
+| 18 automated tests (18/18 pass), including a real-data sample | `tests/` |
+| README with architecture, contract, schema and handoff docs | `README.md`, `docs/` |
 | Independent verification of evaluation and benchmark numbers | Caught the 1022 rps run, the delay wording, and the pair-selection issue |
 
 ### Pending
 
 | Item | Priority |
 |---|---|
-| Retrain and re-evaluate if the team re-picks the pairs from normal-only traffic | 🟠 Only if decided |
+| Update README results for the retrained model | 🟠 Before Review 3 |
+| Add a sliding-window sample to the test fixtures | 🟡 Planned |
 | Rename placeholder columns (`pair_37_count` → readable) | ⚪ Future work |
 
 ---
@@ -214,7 +208,7 @@ Retraining was handed over to Krishita and is done. Open item:
 |---|---|
 | Bigrams before Review 3? | **Yes, reversed 17 Oct.** Implemented with sliding windows; both datasets recaptured. The paper describes 74 features with 71 populated. |
 | Sliding windows? | **Yes.** An attack crossing a window boundary lands whole in at least one window. Costs row independence, which the paper must acknowledge. |
-| How the 50 pairs were chosen | **33 transitions observed in a survey capture of nginx traffic plus the 5 simulated attacks, plus 17 hand-picked post-exploitation transitions.** The survey included attack traffic, so the paper must say so. Normal traffic alone shows only 7 transitions. Zeroing the attack-informed columns leaves detection unchanged (5/5, FP 0). **Open:** keep and disclose, or re-pick from normal-only traffic (needs both captures redone and a retrain). |
+| How the 50 pairs were chosen | **33 transitions observed in a survey capture of nginx traffic plus the 5 simulated attacks, plus 17 hand-picked post-exploitation transitions.** The survey included attack traffic, so the paper must say so. Normal traffic alone shows only 7 transitions. Zeroing the attack-informed columns leaves detection unchanged (5/5, FP 0). Re-picking from normal-only traffic is the cleaner option if time allows. |
 | Headline threshold | **mean + 3σ** of normal validation error, with the PR curve and the p95/p99 points for comparison. |
 | Train / validation split | **By time.** Sliding windows overlap, so a random split would put near-duplicate rows on both sides. |
 | Retraining owner | **Krishita**, taking over from Abhiram. |

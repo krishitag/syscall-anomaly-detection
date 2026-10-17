@@ -4,4 +4,4 @@ data/*.csv
 !data/normal.csv
 !data/eval.csv
 !data/attack_log.csv
-.DS_Store
+__pycache__/
