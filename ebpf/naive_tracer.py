@@ -1,7 +1,16 @@
 #!/usr/bin/env python3
-"""Strawman: per-event export to userspace, the conventional collection model."""
+"""
+Strawman: per-event export to userspace, the conventional collection model.
+
+Counts exported events AND events dropped by the perf ring buffer. Event loss
+is the correctness argument: per-event export drops events under load, while
+in-kernel aggregation cannot, by construction.
+
+usage: sudo python3 ebpf/naive_tracer.py [container]
+       prints "exported,lost,loss_pct" on exit
+"""
 from bcc import BPF
-import os, subprocess, sys
+import os, signal, subprocess, sys
 
 def cgroup_id_for(c):
     cid = subprocess.check_output(
@@ -28,15 +37,35 @@ TRACEPOINT_PROBE(raw_syscalls, sys_enter) {
 """
 
 b = BPF(text=prog, cflags=[f"-DTARGET_CGROUP={cgid}ULL"])
-n = 0
-def cb(cpu, data, size):
-    global n
+
+n_events = 0
+n_lost = 0
+
+def on_event(cpu, data, size):
+    global n_events
     e = b["events"].event(data)
-    n += 1          # userspace does the counting, as Falco/ptrace designs do
-b["events"].open_perf_buffer(cb, page_cnt=64)
-print(f"naive per-event tracer, cgroup={cgid} (Ctrl+C to stop)")
+    n_events += 1          # userspace does the counting, as Falco/ptrace do
+
+def on_lost(lost):
+    global n_lost
+    n_lost += lost
+
+b["events"].open_perf_buffer(on_event, page_cnt=64, lost_cb=on_lost)
+
+# marker the orchestrator waits for before starting the workload
+print(f"READY naive per-event tracer cgroup={cgid}", flush=True)
+
+def report(*_):
+    total = n_events + n_lost
+    pct = (100.0 * n_lost / total) if total else 0.0
+    print(f"\nRESULT exported={n_events} lost={n_lost} loss_pct={pct:.3f}",
+          flush=True)
+    sys.exit(0)
+
+signal.signal(signal.SIGTERM, report)
+
 try:
     while True:
         b.perf_buffer_poll()
 except KeyboardInterrupt:
-    print(f"\n{n} events exported")
+    report()
