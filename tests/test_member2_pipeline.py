@@ -273,5 +273,47 @@ class EvaluationLabelTests(unittest.TestCase):
                     load_attack_log(self._write_attack_log(lines))
 
 
+# Seven consecutive rows from the bigram + sliding-window eval.csv (2 s span,
+# 1 s step) around the recon attack, and that attack's line from the log.
+SLIDING_SAMPLE_CSV = Path(__file__).parent / "fixtures" / "sliding_eval_sample.csv"
+SLIDING_ATTACK_LOG = Path(__file__).parent / "fixtures" / "sliding_attack_log.csv"
+
+
+class SlidingWindowTests(unittest.TestCase):
+    def test_overlapping_windows_pass_validation(self) -> None:
+        loaded = load_aggregated_csv(SLIDING_SAMPLE_CSV)
+        validate_aggregated_csv(loaded)
+
+        prepared = prepare_aggregated_csv(SLIDING_SAMPLE_CSV)
+        starts = [int(row[1]) for row in prepared.metadata_rows]
+        ends = [int(row[2]) for row in prepared.metadata_rows]
+
+        self.assertEqual(prepared.X.shape, (7, 74))
+        self.assertTrue(all(ends[i] > starts[i + 1] for i in range(len(starts) - 1)))
+
+    def test_bigram_columns_are_populated(self) -> None:
+        prepared = prepare_aggregated_csv(SLIDING_SAMPLE_CSV)
+        pair_start = FEATURE_COLUMNS.index("pair_01_count")
+
+        self.assertGreater(prepared.X[:, pair_start : pair_start + 50].sum(), 0.0)
+
+    def test_attack_labels_every_overlapping_window(self) -> None:
+        labeled = prepare_labeled_evaluation(SLIDING_SAMPLE_CSV, SLIDING_ATTACK_LOG)
+
+        self.assertEqual(labeled.y.tolist(), [0, 0, 1, 1, 0, 0, 0])
+
+    def test_duplicate_window_start_is_still_rejected(self) -> None:
+        loaded = load_aggregated_csv(SLIDING_SAMPLE_CSV)
+        rows = [list(row) for row in loaded.rows]
+        rows[1][1] = rows[0][1]
+        duplicate = LoadedAggregatedCsv(
+            loaded.source_path, loaded.header, tuple(tuple(row) for row in rows)
+        )
+
+        with self.assertRaises(CsvContractError) as context:
+            validate_aggregated_csv(duplicate)
+        self.assertTrue(any("duplicate" in error for error in context.exception.errors))
+
+
 if __name__ == "__main__":
     unittest.main()

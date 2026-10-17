@@ -1,6 +1,8 @@
-numpy
-pandas
-scikit-learn
-matplotlib
-torch
-joblib
+# Versions used to train the committed model (person3_ml/models/).
+# Loading the scaler with a different scikit-learn version prints a warning.
+numpy==2.0.2
+pandas==2.3.3
+scikit-learn==1.6.1
+matplotlib==3.9.4
+torch==2.8.0
+joblib==1.5.3
