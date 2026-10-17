@@ -74,7 +74,7 @@ and `python3 -m person3_ml.baselines data/normal.csv data/eval.csv data/attack_l
 
 | Area | Owner | Status |
 |---|---|---|
-| eBPF collection, workloads, datasets, benchmark | Naman | ✅ All benchmark items done · one clean demo pass pending |
+| eBPF collection, workloads, datasets, benchmark | Naman | ✅ All benchmark items done · demo verified |
 | Data pipeline, retraining, evaluation, baselines | Krishita | ✅ Retrained and evaluated on the new data |
 | Original autoencoder model | Abhiram | ✅ Done (retraining handed over to Krishita) |
 | Paper | Team | 🟠 Update evaluation section with the current results |
@@ -108,6 +108,7 @@ and `python3 -m person3_ml.baselines data/normal.csv data/eval.csv data/attack_l
 | **`collector_stats` fixed** (reads the tracer's Python process, not the `sudo` wrapper) and rerun | `bench/run_all.sh` |
 | **nginx throughput rerun on the bigram tracer**, attachment checked, appended to `bench.jsonl` | `bench/run_nginx.sh`, `data/bench.jsonl` |
 | **Distinct / total syscalls per window and map size per read** | `bench/window_stats.sh`, `bench/window_stats.log` |
+| **Live demo verified** with the retrained model and the container unpinned: no false alerts during normal traffic, ALERT on the attack | `demo/run_demo.sh` |
 | One-terminal demo launcher, and a kill switch for every script | `demo/run_demo.sh`, `kill.sh` |
 | Benchmarks now unpin the container on exit (pinning caused the demo false alerts, see Findings) | `bench/run_all.sh` |
 
@@ -154,7 +155,6 @@ and `python3 -m person3_ml.baselines data/normal.csv data/eval.csv data/attack_l
 
 | Item | Why it matters | Priority |
 |---|---|---|
-| One clean demo pass with the container unpinned | Demo rehearsed with the retrained model: attack scored 111–120 vs normal ≤0.01, alert named `execve clone fchmodat`. The second run raised false alerts under load; root cause was CPU pinning left by the benchmark, now fixed but not yet re-verified | 🔴 Before Review 3 |
 | Update the kernel version in the paper draft (6.8.0-138, not 134) | The VM updated | 🟡 For the paper |
 | Steady-state collector CPU (`pidstat -p <pid> 1`) | `ps %cpu` is a lifetime average dominated by startup | 🟡 For the paper |
 | Event loss under a faster consumer and workload | The measured 0% loss doesn't show per-event export is lossless: the slow consumer throttled the workload | ⚪ Future work |
