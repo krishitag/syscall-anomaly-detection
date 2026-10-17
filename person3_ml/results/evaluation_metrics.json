@@ -1,5 +1,5 @@
 {
-    "model_dir": "/Users/krishita/Desktop/syscall-anomaly-detection/person3_ml/models",
+    "model_dir": "C:\\Users\\kalla\\syscall-anomaly-detection\\person3_ml\\models",
     "threshold_rule": "mean + 3 x std of validation errors",
     "operating_points": {
         "saved": {
@@ -117,21 +117,21 @@
     ],
     "reconstruction_error": {
         "attack": {
-            "mean": 496.2791748046875,
+            "mean": 496.2792053222656,
             "median": 16.844745635986328,
-            "max": 3396.070556640625
+            "max": 3396.07080078125
         },
         "normal": {
-            "mean": 0.0008672873955219984,
-            "median": 0.00021467039186973125,
-            "max": 0.013818910345435143
+            "mean": 0.0008672873373143375,
+            "median": 0.0002146704209735617,
+            "max": 0.013818911276757717
         },
-        "median_ratio": 78467.95028076462
+        "median_ratio": 78467.93964251314
     },
     "curves": {
         "average_precision": 0.7077911415066183,
-        "roc_auc": 0.7973180076628352,
-        "plot": "/Users/krishita/Desktop/syscall-anomaly-detection/person3_ml/results/pr_roc_curves.png"
+        "roc_auc": 0.7973180076628351,
+        "plot": "C:\\Users\\kalla\\syscall-anomaly-detection\\person3_ml\\results\\pr_roc_curves.png"
     },
     "training": {
         "epochs": 100,
@@ -140,8 +140,8 @@
     },
     "scoring_time": {
         "calls": 945,
-        "median_ms": 0.14379200000003145,
-        "p99_ms": 0.18984355999988256,
-        "max_ms": 0.28437499999989235
+        "median_ms": 0.64580000253045,
+        "p99_ms": 1.3905200021690685,
+        "max_ms": 2.328899998246925
     }
 }

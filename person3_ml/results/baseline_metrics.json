@@ -70,7 +70,7 @@
                 "attacks_total": 5
             },
             "p95": {
-                "threshold": -5.915143212268214,
+                "threshold": -5.915143212268216,
                 "windows": 189,
                 "attack_windows": 15,
                 "true_positives": 10,
