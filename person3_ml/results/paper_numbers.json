@@ -1,0 +1,153 @@
+{
+    "threshold": 0.013806177303195,
+    "detection_delay": {
+        "per_attack_s": {
+            "recon": 0.764104209,
+            "drop_exec": 1.006248503,
+            "outbound_conn": 0.526664128,
+            "ns_escape": 0.968325124,
+            "spawn_storm": 0.656422634
+        },
+        "mean_s": 0.7843529196,
+        "max_s": 1.006248503
+    },
+    "separation": {
+        "windows_with_security_calls": 10,
+        "of_which_labelled_attack": 10,
+        "normal_windows_with_security_calls": 0,
+        "min_error_attack_windows_with_calls": 14.870962142944336,
+        "max_error_normal_windows": 0.013818910345435143,
+        "ratio": 1076.1313136282647
+    },
+    "false_positives": [
+        {
+            "window": 70,
+            "error": 0.013818910345435143,
+            "vocab_calls": 91,
+            "mean_vocab_calls_per_normal_window": 111.33333333333333,
+            "nonzero_pair_columns": [
+                "pair_01_count",
+                "pair_02_count",
+                "pair_03_count",
+                "pair_04_count",
+                "pair_05_count",
+                "pair_06_count",
+                "pair_07_count",
+                "pair_18_count"
+            ]
+        }
+    ],
+    "pair_selection_check": {
+        "zeroed_pair_columns": [
+            "pair_08_count",
+            "pair_09_count",
+            "pair_10_count",
+            "pair_11_count",
+            "pair_12_count",
+            "pair_13_count",
+            "pair_14_count",
+            "pair_15_count",
+            "pair_16_count",
+            "pair_17_count",
+            "pair_18_count",
+            "pair_19_count",
+            "pair_20_count",
+            "pair_21_count",
+            "pair_22_count",
+            "pair_23_count",
+            "pair_24_count",
+            "pair_25_count",
+            "pair_26_count",
+            "pair_27_count",
+            "pair_28_count",
+            "pair_29_count",
+            "pair_30_count",
+            "pair_31_count",
+            "pair_32_count",
+            "pair_33_count",
+            "pair_34_count",
+            "pair_35_count",
+            "pair_36_count",
+            "pair_37_count",
+            "pair_38_count",
+            "pair_39_count",
+            "pair_40_count",
+            "pair_41_count",
+            "pair_42_count",
+            "pair_43_count",
+            "pair_44_count",
+            "pair_45_count",
+            "pair_46_count",
+            "pair_47_count",
+            "pair_48_count",
+            "pair_49_count",
+            "pair_50_count"
+        ],
+        "metrics": {
+            "threshold": 0.013806177303195,
+            "windows": 189,
+            "attack_windows": 15,
+            "true_positives": 10,
+            "false_positives": 0,
+            "true_negatives": 174,
+            "false_negatives": 5,
+            "precision": 1.0,
+            "recall": 0.6666666666666666,
+            "f1": 0.8,
+            "false_positive_rate": 0.0,
+            "attacks_detected": 5,
+            "attacks_total": 5
+        }
+    },
+    "training_capture": {
+        "windows": 585,
+        "idle_windows": 59,
+        "families_ever_nonzero": 7,
+        "security_families_ever_nonzero": 0,
+        "pair_columns_ever_nonzero": 7,
+        "per_family": {
+            "write": {
+                "total": 10778,
+                "max_per_window": 373
+            },
+            "recvfrom": {
+                "total": 8962,
+                "max_per_window": 311
+            },
+            "openat": {
+                "total": 8962,
+                "max_per_window": 312
+            },
+            "close": {
+                "total": 16106,
+                "max_per_window": 561
+            },
+            "epoll_wait": {
+                "total": 17624,
+                "max_per_window": 568
+            },
+            "accept4": {
+                "total": 9014,
+                "max_per_window": 324
+            },
+            "sendfile": {
+                "total": 7146,
+                "max_per_window": 250
+            }
+        },
+        "vocab_calls_summed_over_windows": 78592,
+        "max_vocab_calls_per_window": 2699,
+        "note": "Windows overlap (2 s span, 1 s step), so sums over windows count each second twice."
+    },
+    "transfer_counts": {
+        "per_event_records_per_window": {
+            "mean": 134.34529914529915,
+            "median": 54.0,
+            "p95": 422.5999999999999,
+            "max": 2699,
+            "idle_windows": 59
+        },
+        "in_kernel_reads_per_window": 1,
+        "note": "Lower bound: counts only the 20 vocabulary families. Per 2 s window."
+    }
+}
