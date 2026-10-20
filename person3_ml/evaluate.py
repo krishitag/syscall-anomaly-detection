@@ -18,8 +18,14 @@ Reports everything the paper needs in one run:
     - final training / validation loss
     - scoring time per window
 
+Several captures can be passed as eval_csv / attack_log pairs.  Metrics,
+curves and error summaries are pooled over all windows of all captures, and
+each capture also gets its own confusion matrix and attacks detected.
+
 Usage:
     python -m person3_ml.evaluate data/eval.csv data/attack_log.csv
+    python -m person3_ml.evaluate data/eval.csv data/attack_log.csv \\
+        data/eval2.csv data/attack_log2.csv
     SYSCALL_MODELS_DIR=path/to/models python -m person3_ml.evaluate ...
 """
 
@@ -35,6 +41,7 @@ import numpy as np
 
 from member2.evaluation_labels import (
     AttackInterval,
+    LabeledEvaluationInput,
     prepare_labeled_evaluation,
 )
 from member2.pipeline import prepare_window
@@ -86,6 +93,90 @@ def attack_windows(
         np.where((attack.start_ns < ends) & (attack.end_ns >= starts))[0]
         for attack in attacks
     ]
+
+
+@dataclass
+class EvaluationRun:
+    """One labelled capture: eval CSV, its attack log, and attack windows."""
+
+    eval_csv: str
+    attack_log: str
+    labeled: LabeledEvaluationInput
+    per_attack: list[np.ndarray]
+
+
+def load_runs(paths: list[str]) -> list[EvaluationRun]:
+    """Load ``eval_csv attack_log [eval_csv attack_log ...]`` pairs."""
+
+    if not paths or len(paths) % 2:
+        raise ValueError(
+            "expected eval_csv / attack_log pairs, "
+            f"got {len(paths)} paths"
+        )
+
+    runs = []
+    for eval_csv, attack_log in zip(paths[::2], paths[1::2]):
+        labeled = prepare_labeled_evaluation(eval_csv, attack_log)
+        runs.append(
+            EvaluationRun(
+                eval_csv=str(eval_csv),
+                attack_log=str(attack_log),
+                labeled=labeled,
+                per_attack=attack_windows(
+                    labeled.prepared.metadata_rows,
+                    labeled.attacks,
+                ),
+            )
+        )
+    return runs
+
+
+def pool(
+    runs: list[EvaluationRun],
+    scores: list[np.ndarray],
+) -> tuple[np.ndarray, np.ndarray, list[np.ndarray]]:
+    """Concatenate labels and scores; shift attack window indices to match."""
+
+    per_attack = []
+    offset = 0
+    for run in runs:
+        per_attack.extend(windows + offset for windows in run.per_attack)
+        offset += len(run.labeled.y)
+
+    return (
+        np.concatenate([run.labeled.y for run in runs]),
+        np.concatenate(scores),
+        per_attack,
+    )
+
+
+def per_run_metrics(
+    runs: list[EvaluationRun],
+    scores: list[np.ndarray],
+    threshold: float,
+) -> list[dict]:
+    """Confusion matrix and attacks detected for each capture on its own."""
+
+    results = []
+    for run, run_scores in zip(runs, scores):
+        predictions = run_scores > threshold
+        results.append({
+            "eval_csv": run.eval_csv,
+            "attack_log": run.attack_log,
+            "metrics": asdict(
+                compute_metrics(run.labeled.y, run_scores, threshold, run.per_attack)
+            ),
+            "attacks": [
+                {
+                    "attack": attack.attack,
+                    "windows": windows.tolist(),
+                    "flagged": int(predictions[windows].sum()),
+                    "detected": bool(predictions[windows].any()),
+                }
+                for attack, windows in zip(run.labeled.attacks, run.per_attack)
+            ],
+        })
+    return results
 
 
 def compute_metrics(
@@ -223,33 +314,31 @@ def load_training_summary() -> dict:
         return json.load(file)
 
 
-def evaluate(eval_csv: str | Path, attack_log: str | Path, results_dir: Path):
+def evaluate(paths: list[str], results_dir: Path):
 
-    labeled = prepare_labeled_evaluation(eval_csv, attack_log)
-    y_true = labeled.y
+    runs = load_runs(paths)
+    run_errors = [reconstruction_errors(run.labeled.prepared.X) for run in runs]
+    y_true, errors, per_attack = pool(runs, run_errors)
 
-    errors = reconstruction_errors(labeled.prepared.X)
     threshold = anomaly_threshold()
-    per_attack = attack_windows(labeled.prepared.metadata_rows, labeled.attacks)
     training = load_training_summary()
 
-    predictions = errors > threshold
     operating_points = {"saved": compute_metrics(y_true, errors, threshold, per_attack)}
     for name, value in training.get("alternatives", {}).items():
         operating_points[name] = compute_metrics(y_true, errors, value, per_attack)
 
+    runs_report = per_run_metrics(runs, run_errors, threshold)
+
     return {
         "model_dir": str(detect.MODELS_DIR),
+        "feature_columns": detect.feature_columns(),
         "threshold_rule": training.get("rule", "95th percentile of validation errors"),
         "operating_points": {k: asdict(v) for k, v in operating_points.items()},
+        "runs": runs_report,
         "per_attack": [
-            {
-                "attack": attack.attack,
-                "windows": windows.tolist(),
-                "flagged": int(predictions[windows].sum()),
-                "detected": bool(predictions[windows].any()),
-            }
-            for attack, windows in zip(labeled.attacks, per_attack)
+            dict(attack, run=run["eval_csv"])
+            for run in runs_report
+            for attack in run["attacks"]
         ],
         "reconstruction_error": error_summary(errors, y_true),
         "curves": curves(errors, y_true, results_dir),
@@ -258,13 +347,14 @@ def evaluate(eval_csv: str | Path, attack_log: str | Path, results_dir: Path):
             for key in ("epochs", "final_train_loss", "final_validation_loss")
             if key in training
         },
-        "scoring_time": scoring_time_ms(eval_csv),
+        "scoring_time": scoring_time_ms(runs[0].eval_csv),
     }
 
 
 def _print_metrics(name: str, m: dict) -> None:
+    print(f"  {name}")
     print(
-        f"  {name:<8} threshold={m['threshold']:.6g}  "
+        f"    threshold={m['threshold']:.6g}  "
         f"TP={m['true_positives']} FP={m['false_positives']} "
         f"TN={m['true_negatives']} FN={m['false_negatives']}  "
         f"P={m['precision']:.4f} R={m['recall']:.4f} F1={m['f1']:.4f} "
@@ -283,13 +373,13 @@ def main() -> None:
     )
 
     parser.add_argument(
-        "eval_csv",
-        help="Evaluation aggregated CSV (normal traffic + attacks).",
-    )
-
-    parser.add_argument(
-        "attack_log",
-        help="Attack log CSV: attack,start_ns,end_ns.",
+        "paths",
+        nargs="+",
+        metavar="eval_csv attack_log",
+        help=(
+            "One or more pairs: evaluation aggregated CSV (normal traffic + "
+            "attacks), then its attack log CSV (attack,start_ns,end_ns)."
+        ),
     )
 
     parser.add_argument(
@@ -300,9 +390,11 @@ def main() -> None:
     )
 
     args = parser.parse_args()
+    if len(args.paths) % 2:
+        parser.error("paths must come in eval_csv / attack_log pairs")
     args.results_dir.mkdir(parents=True, exist_ok=True)
 
-    report = evaluate(args.eval_csv, args.attack_log, args.results_dir)
+    report = evaluate(args.paths, args.results_dir)
     saved = report["operating_points"]["saved"]
 
     print()
@@ -310,12 +402,14 @@ def main() -> None:
     print("EVALUATION")
     print("=" * 65)
     print(f"Model               : {report['model_dir']}")
+    print(f"Model features      : {len(report['feature_columns'])} of 74")
     print(f"Threshold rule      : {report['threshold_rule']}")
+    print(f"Captures            : {len(report['runs'])}")
     print(f"Windows             : {saved['windows']}")
     print(f"Attack windows      : {saved['attack_windows']}")
 
     print()
-    print("Operating points:")
+    print("Operating points" + (" (all captures pooled):" if len(report["runs"]) > 1 else ":"))
     for name, metrics in report["operating_points"].items():
         _print_metrics(name, metrics)
 
@@ -326,13 +420,16 @@ def main() -> None:
     print(f"Curve plot          : {curve['plot']}")
 
     print()
-    print("Per attack (saved threshold):")
-    for attack in report["per_attack"]:
-        print(
-            f"  {attack['attack']:<16}"
-            f"{attack['flagged']}/{len(attack['windows'])} windows flagged  "
-            f"{'DETECTED' if attack['detected'] else 'MISSED'}"
-        )
+    print("Per capture (saved threshold):")
+    for run in report["runs"]:
+        print()
+        _print_metrics(run["eval_csv"], run["metrics"])
+        for attack in run["attacks"]:
+            print(
+                f"    {attack['attack']:<16}"
+                f"{attack['flagged']}/{len(attack['windows'])} windows flagged  "
+                f"{'DETECTED' if attack['detected'] else 'MISSED'}"
+            )
 
     errors = report["reconstruction_error"]
     print()

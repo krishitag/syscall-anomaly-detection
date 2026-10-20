@@ -25,8 +25,9 @@ flowchart LR
         CSV --> P["member2 pipeline<br/>load → validate → order → split"]
         P --> X["X: N × 74 features"]
         P --> META["metadata<br/>cgroup_id, window start/end"]
-        X --> S["StandardScaler<br/>(fit on normal only)"]
-        S --> AE["Autoencoder<br/>74 → 64 → 32 → 8 → 32 → 64 → 74"]
+        X --> SEL["28 model columns<br/>(chosen from normal only)"]
+        SEL --> S["StandardScaler<br/>(fit on normal only)"]
+        S --> AE["Autoencoder<br/>28 → 64 → 32 → 8 → 32 → 64 → 28"]
         AE --> ERR["Reconstruction error"]
         ERR --> TH{"error ><br/>threshold?"}
         TH -->|yes| ALERT["ANOMALY"]
@@ -48,9 +49,9 @@ The system has three stages:
    separates the 3 metadata columns from the 74 model features. The output is
    a `float64` matrix `X` plus the matching metadata rows, which tie each
    prediction back to a container and a time window.
-3. **Detection (`person3_ml/`).** Scales the features and passes them through
-   the autoencoder. The mean squared reconstruction error is compared against
-   a threshold learned from normal traffic only.
+3. **Detection (`person3_ml/`).** Keeps the 28 model columns, scales them and
+   passes them through the autoencoder. The mean squared reconstruction error
+   is compared against a threshold learned from normal traffic only.
 
 ### Why these choices
 
@@ -81,6 +82,12 @@ its header from the same list.
 | `stat_04` | 1 | Distinct syscall families seen in the window (0–20) | Real |
 
 71 of the 74 features are populated.
+
+**Model input: 28 of the 74.** Training keeps all 20 syscall-family counts,
+the pair columns that are non-zero in normal training windows (7:
+`pair_01`–`pair_07`), and `stat_04`. The choice uses normal data only and is
+saved in `person3_ml/models/features.json`. The CSV still carries all 77
+columns, and `detect.py` takes 74-column input and picks the 28 itself.
 
 The 20 syscalls fall into two groups:
 
@@ -175,6 +182,10 @@ python3 -m person3_ml.plot_timeline data/eval.csv data/attack_log.csv
 python3 analyze.py
 ```
 
+`evaluate` and `baselines` accept several captures as extra
+`eval_csv attack_log` pairs, and report pooled metrics plus each capture's
+confusion matrix and attacks detected.
+
 A window is labelled as an attack if it overlaps any attack interval. These
 report:
 - precision, recall, F1 and false-positive rate at each threshold
@@ -225,28 +236,29 @@ python3 -m unittest discover -s tests -v
 ## Results
 
 Trained on `data/normal.csv` (585 windows; 467 training, 117 validation, split
-by time). Evaluated on `data/eval.csv`: 189 windows, 15 attack and 174 normal.
-Threshold: mean + 3σ of validation error (0.0138).
+by time) with the 28 model columns. Evaluated on `data/eval.csv`: 189 windows,
+15 attack and 174 normal. Threshold: mean + 3σ of validation error (0.0183).
 
 | Detector | TP | FP | TN | FN | Precision | Recall | F1 | FPR | Attacks detected |
 |---|---|---|---|---|---|---|---|---|---|
-| Autoencoder | 10 | 1 | 173 | 5 | 0.909 | 0.667 | 0.769 | 0.006 | 5/5 |
+| Autoencoder | 10 | 0 | 174 | 5 | 1.000 | 0.667 | 0.800 | 0.000 | 5/5 |
 | One-Class SVM | 10 | 0 | 174 | 5 | 1.000 | 0.667 | 0.800 | 0.000 | 5/5 |
 | Isolation Forest | 0 | 0 | 174 | 15 | 0.000 | 0.000 | 0.000 | 0.000 | 0/5 |
 
 - **Every window containing attack syscalls was flagged.** Their errors are
-  over 1,000× the highest normal error. The 5 missed windows are an outbound
+  over 3,800× the highest normal error. The 5 missed windows are an outbound
   connection that hangs and looks idle.
-- **Curves (autoencoder):** average precision 0.708, ROC AUC 0.797.
-- **Detection delay:** mean about 0.79 s, max 1.01 s.
-- **Scoring time:** about 0.14 ms per window.
+- **Curves (autoencoder):** average precision 0.722, ROC AUC 0.841.
+- **Detection delay:** mean 0.78 s, max 1.01 s.
+- **Scoring time:** about 0.13 ms per window.
 - **Collection cost:** the in-kernel tracer adds 405 ns per syscall (1.64× on
   a `getpid` loop), against 896× for exporting every event to user space.
   Exporting every event also cut nginx throughput by 72.8%. See
   [results.md](results.md).
 
 Results from before bigrams and sliding windows are kept in
-`person3_ml/results_unigram/` and are superseded.
+`person3_ml/results_unigram/`, and from the 74-feature model in
+`person3_ml/results_74/`. Both are superseded.
 
 ## Limitations
 
@@ -255,9 +267,10 @@ Results from before bigrams and sliding windows are kept in
   data.
 - **`clone → execve` can't be seen as a pair.** Pairs are counted per thread,
   and the two calls happen in different processes.
-- **Pair selection used attack traffic.** The 50 pairs were chosen from a
-  capture that included the simulated attacks. Zeroing the pairs that only
-  attacks produce leaves detection unchanged (5/5 attacks, 0 false positives).
+- **The CSV's pair columns were chosen with attack traffic.** The 50 emitted
+  pairs came from a capture that included the simulated attacks. The model
+  uses only the 7 of them seen in normal traffic, so its input no longer
+  depends on that choice.
 - **`docker exec` adds syscalls.** Simulated attacks run through
   `docker exec`, which adds syscalls of its own to every attack's signature.
 - **Rows overlap.** Neighbouring windows share a second, so they aren't

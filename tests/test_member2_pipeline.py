@@ -315,5 +315,34 @@ class SlidingWindowTests(unittest.TestCase):
         self.assertTrue(any("duplicate" in error for error in context.exception.errors))
 
 
+class FeatureSelectionTests(unittest.TestCase):
+    def test_selection_keeps_families_observed_pairs_and_stat_04(self) -> None:
+        from person3_ml.preprocessing import column_indices, select_feature_columns
+
+        X = np.zeros((4, 74))
+        X[1, FEATURE_COLUMNS.index("pair_03_count")] = 5
+        X[2, FEATURE_COLUMNS.index("stat_01")] = 7
+
+        columns = select_feature_columns(X)
+
+        self.assertEqual(columns[:20], [f"syscall_{i:02d}_count" for i in range(1, 21)])
+        self.assertEqual(columns[20:], ["pair_03_count", "stat_04"])
+        self.assertEqual(
+            column_indices(columns).tolist(),
+            list(range(20)) + [22, 73],
+        )
+
+    def test_real_normal_sample_selects_only_observed_pairs(self) -> None:
+        from person3_ml.preprocessing import select_feature_columns
+
+        X = prepare_aggregated_csv(REAL_SAMPLE_CSV).X
+        columns = select_feature_columns(X)
+
+        for column in columns:
+            if column.startswith("pair_"):
+                self.assertTrue(X[:, FEATURE_COLUMNS.index(column)].any())
+        self.assertNotIn("stat_01", columns)
+
+
 if __name__ == "__main__":
     unittest.main()

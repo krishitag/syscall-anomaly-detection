@@ -1,0 +1,147 @@
+{
+    "model_dir": "C:\\Users\\kalla\\syscall-anomaly-detection\\person3_ml\\models",
+    "threshold_rule": "mean + 3 x std of validation errors",
+    "operating_points": {
+        "saved": {
+            "threshold": 0.013806177303195,
+            "windows": 189,
+            "attack_windows": 15,
+            "true_positives": 10,
+            "false_positives": 1,
+            "true_negatives": 173,
+            "false_negatives": 5,
+            "precision": 0.9090909090909091,
+            "recall": 0.6666666666666666,
+            "f1": 0.7692307692307692,
+            "false_positive_rate": 0.005747126436781609,
+            "attacks_detected": 5,
+            "attacks_total": 5
+        },
+        "p95": {
+            "threshold": 0.0032245491165667772,
+            "windows": 189,
+            "attack_windows": 15,
+            "true_positives": 10,
+            "false_positives": 11,
+            "true_negatives": 163,
+            "false_negatives": 5,
+            "precision": 0.47619047619047616,
+            "recall": 0.6666666666666666,
+            "f1": 0.5555555555555556,
+            "false_positive_rate": 0.06321839080459771,
+            "attacks_detected": 5,
+            "attacks_total": 5
+        },
+        "p99": {
+            "threshold": 0.025889042764902115,
+            "windows": 189,
+            "attack_windows": 15,
+            "true_positives": 10,
+            "false_positives": 0,
+            "true_negatives": 174,
+            "false_negatives": 5,
+            "precision": 1.0,
+            "recall": 0.6666666666666666,
+            "f1": 0.8,
+            "false_positive_rate": 0.0,
+            "attacks_detected": 5,
+            "attacks_total": 5
+        },
+        "max": {
+            "threshold": 0.03404182195663452,
+            "windows": 189,
+            "attack_windows": 15,
+            "true_positives": 10,
+            "false_positives": 0,
+            "true_negatives": 174,
+            "false_negatives": 5,
+            "precision": 1.0,
+            "recall": 0.6666666666666666,
+            "f1": 0.8,
+            "false_positive_rate": 0.0,
+            "attacks_detected": 5,
+            "attacks_total": 5
+        }
+    },
+    "per_attack": [
+        {
+            "attack": "recon",
+            "windows": [
+                21,
+                22
+            ],
+            "flagged": 2,
+            "detected": true
+        },
+        {
+            "attack": "drop_exec",
+            "windows": [
+                35,
+                36
+            ],
+            "flagged": 2,
+            "detected": true
+        },
+        {
+            "attack": "outbound_conn",
+            "windows": [
+                49,
+                50,
+                51,
+                52,
+                53,
+                54,
+                55
+            ],
+            "flagged": 2,
+            "detected": true
+        },
+        {
+            "attack": "ns_escape",
+            "windows": [
+                68,
+                69
+            ],
+            "flagged": 2,
+            "detected": true
+        },
+        {
+            "attack": "spawn_storm",
+            "windows": [
+                82,
+                83
+            ],
+            "flagged": 2,
+            "detected": true
+        }
+    ],
+    "reconstruction_error": {
+        "attack": {
+            "mean": 496.2792053222656,
+            "median": 16.844745635986328,
+            "max": 3396.07080078125
+        },
+        "normal": {
+            "mean": 0.0008672873373143375,
+            "median": 0.0002146704209735617,
+            "max": 0.013818911276757717
+        },
+        "median_ratio": 78467.93964251314
+    },
+    "curves": {
+        "average_precision": 0.7077911415066183,
+        "roc_auc": 0.7973180076628351,
+        "plot": "C:\\Users\\kalla\\syscall-anomaly-detection\\person3_ml\\results\\pr_roc_curves.png"
+    },
+    "training": {
+        "epochs": 100,
+        "final_train_loss": 0.0015076300303418812,
+        "final_validation_loss": 0.0012573875719681382
+    },
+    "scoring_time": {
+        "calls": 945,
+        "median_ms": 0.64580000253045,
+        "p99_ms": 1.3905200021690685,
+        "max_ms": 2.328899998246925
+    }
+}

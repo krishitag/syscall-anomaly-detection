@@ -14,6 +14,10 @@ The detector:
 For the live demo, ``score_window`` scores one 74-feature vector from
 ``member2.pipeline.prepare_window`` and ``anomaly_threshold`` gives the
 cut-off.  Both load the saved artifacts once and reuse them.
+
+Callers always pass all 74 columns.  If the model folder has a
+features.json, only those columns reach the scaler and model; otherwise
+(older models) all 74 do.
 """
 
 from __future__ import annotations
@@ -29,8 +33,10 @@ import numpy as np
 import torch
 
 from member2.pipeline import prepare_aggregated_csv
+from member2.schema import FEATURE_COLUMNS
 
 from .autoencoder import SyscallAutoencoder
+from .preprocessing import column_indices
 
 
 # Set SYSCALL_MODELS_DIR to score with a different trained model.
@@ -42,11 +48,30 @@ MODELS_DIR = Path(
 )
 
 
+def feature_columns() -> list[str]:
+    """The columns the saved model was trained on (all 74 for older models)."""
+
+    path = MODELS_DIR / "features.json"
+
+    if not path.exists():
+        return list(FEATURE_COLUMNS)
+
+    with open(path, "r", encoding="utf-8") as file:
+        return json.load(file)["columns"]
+
+
+@lru_cache(maxsize=1)
+def feature_indices() -> np.ndarray:
+    """Positions of the model's input columns in the 74-column matrix."""
+
+    return column_indices(feature_columns())
+
+
 def load_artifacts():
     """Load the trained model, scaler, and threshold."""
 
     model = SyscallAutoencoder(
-        input_dim=74,
+        input_dim=len(feature_columns()),
         latent_dim=8,
     )
 
@@ -95,7 +120,7 @@ def reconstruction_errors(X: np.ndarray) -> np.ndarray:
 
     model, scaler, _ = _cached_artifacts()
 
-    X_scaled = scaler.transform(X)
+    X_scaled = scaler.transform(X[:, feature_indices()])
 
     X_tensor = torch.tensor(
         X_scaled,

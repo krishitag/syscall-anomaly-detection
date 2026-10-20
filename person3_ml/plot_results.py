@@ -1,18 +1,13 @@
 from pathlib import Path
 
-import json
-
 import matplotlib.pyplot as plt
 import numpy as np
-import torch
 
 from member2.pipeline import prepare_aggregated_csv
-from person3_ml.autoencoder import SyscallAutoencoder
-import joblib
+from person3_ml.detect import anomaly_threshold, reconstruction_errors
 
 
 RESULTS_DIR = Path("person3_ml/results")
-MODELS_DIR = Path("person3_ml/models")
 
 
 def plot_training_loss():
@@ -67,53 +62,9 @@ def calculate_reconstruction_errors():
         "data/normal.csv"
     )
 
-    X = prepared.X
+    errors = reconstruction_errors(prepared.X)
 
-    scaler = joblib.load(
-        MODELS_DIR / "scaler.joblib"
-    )
-
-    with open(
-        MODELS_DIR / "threshold.json",
-        "r",
-        encoding="utf-8",
-    ) as file:
-        threshold = float(
-            json.load(file)["threshold"]
-        )
-
-    model = SyscallAutoencoder(
-        input_dim=74,
-        latent_dim=8,
-    )
-
-    model.load_state_dict(
-        torch.load(
-            MODELS_DIR / "autoencoder.pt",
-            map_location="cpu",
-        )
-    )
-
-    model.eval()
-
-    X_scaled = scaler.transform(X)
-
-    X_tensor = torch.tensor(
-        X_scaled,
-        dtype=torch.float32,
-    )
-
-    with torch.no_grad():
-
-        errors = (
-            model.reconstruction_error(
-                X_tensor,
-                reduction="none",
-            )
-            .numpy()
-        )
-
-    return errors, threshold
+    return errors, anomaly_threshold()
 
 
 def plot_reconstruction_errors():

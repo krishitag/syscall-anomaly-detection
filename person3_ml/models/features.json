@@ -1,0 +1,33 @@
+{
+    "columns": [
+        "syscall_01_count",
+        "syscall_02_count",
+        "syscall_03_count",
+        "syscall_04_count",
+        "syscall_05_count",
+        "syscall_06_count",
+        "syscall_07_count",
+        "syscall_08_count",
+        "syscall_09_count",
+        "syscall_10_count",
+        "syscall_11_count",
+        "syscall_12_count",
+        "syscall_13_count",
+        "syscall_14_count",
+        "syscall_15_count",
+        "syscall_16_count",
+        "syscall_17_count",
+        "syscall_18_count",
+        "syscall_19_count",
+        "syscall_20_count",
+        "pair_01_count",
+        "pair_02_count",
+        "pair_03_count",
+        "pair_04_count",
+        "pair_05_count",
+        "pair_06_count",
+        "pair_07_count",
+        "stat_04"
+    ],
+    "rule": "all 20 syscall-family counts, pair columns non-zero in normal training windows, stat_04"
+}

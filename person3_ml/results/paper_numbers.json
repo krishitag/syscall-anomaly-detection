@@ -1,5 +1,5 @@
 {
-    "threshold": 0.013806177303195,
+    "threshold": 0.01825469546020031,
     "detection_delay": {
         "per_attack_s": {
             "recon": 0.764104209,
@@ -15,28 +15,11 @@
         "windows_with_security_calls": 10,
         "of_which_labelled_attack": 10,
         "normal_windows_with_security_calls": 0,
-        "min_error_attack_windows_with_calls": 14.870962142944336,
-        "max_error_normal_windows": 0.013818910345435143,
-        "ratio": 1076.1313136282647
+        "min_error_attack_windows_with_calls": 28.469409942626953,
+        "max_error_normal_windows": 0.007339647505432367,
+        "ratio": 3878.852481887666
     },
-    "false_positives": [
-        {
-            "window": 70,
-            "error": 0.013818910345435143,
-            "vocab_calls": 91,
-            "mean_vocab_calls_per_normal_window": 111.33333333333333,
-            "nonzero_pair_columns": [
-                "pair_01_count",
-                "pair_02_count",
-                "pair_03_count",
-                "pair_04_count",
-                "pair_05_count",
-                "pair_06_count",
-                "pair_07_count",
-                "pair_18_count"
-            ]
-        }
-    ],
+    "false_positives": [],
     "pair_selection_check": {
         "zeroed_pair_columns": [
             "pair_08_count",
@@ -84,7 +67,7 @@
             "pair_50_count"
         ],
         "metrics": {
-            "threshold": 0.013806177303195,
+            "threshold": 0.01825469546020031,
             "windows": 189,
             "attack_windows": 15,
             "true_positives": 10,

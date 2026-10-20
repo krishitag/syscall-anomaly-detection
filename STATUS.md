@@ -1,6 +1,6 @@
 # Project Status
 
-**Last updated:** 17 October 2026 (evening) · **Next milestone:** Review 3 · **Paper due:** 31 Oct (ICCIDSDT-2027)
+**Last updated:** 20 October 2026 · **Next milestone:** Review 3 · **Paper due:** 31 Oct (ICCIDSDT-2027)
 
 Syscall anomaly detection for Docker containers: an eBPF tracer counts a
 container's syscalls inside the kernel, and an autoencoder trained on normal
@@ -33,7 +33,21 @@ recall 0.667, F1 0.571, FPR 0.038, threshold 0.0015323, detection delays
 
 ---
 
-## Current results (retrained 17 Oct)
+## Current results (retrained 20 Oct, 28 features chosen from normal data)
+
+Review comment 9 asked for feature selection from normal data only. The model
+input is now **28 of the 74 columns**: all 20 syscall-family counts, the 7 pair
+columns non-zero in normal training windows (`pair_01`–`pair_07`), and
+`stat_04`. Dropped from the model input: `stat_01`–`stat_03` (always zero) and
+the 43 pair columns never seen in normal traffic. **The CSV is unchanged (77
+columns)**; the list is saved in `person3_ml/models/features.json` and applied
+inside `detect.py`, so `score_window` / `anomaly_threshold` still take 74-column
+input.
+
+Note for the paper: 13 of the 20 families are also zero in normal traffic.
+They are kept because the family vocabulary was fixed in advance, not picked
+from data; only the pair columns were chosen from data, and now from normal
+data only.
 
 Model trained on 467 windows and validated on 117 (time-based split of
 `data/normal.csv`; 1 window dropped for overlap). Evaluated on `data/eval.csv`:
@@ -41,32 +55,43 @@ Model trained on 467 windows and validated on 117 (time-based split of
 
 | Detector | Threshold | TP | FP | TN | FN | Precision | Recall | F1 | FPR | Attacks |
 |---|---|---|---|---|---|---|---|---|---|---|
-| **Autoencoder** | **mean + 3σ = 0.0138062** | **10** | **1** | **173** | **5** | **0.9091** | **0.6667** | **0.7692** | **0.0057** | **5/5** |
-| Autoencoder | p95 = 0.0032245 | 10 | 11 | 163 | 5 | 0.4762 | 0.6667 | 0.5556 | 0.0632 | 5/5 |
-| Autoencoder | p99 = 0.0258890 | 10 | 0 | 174 | 5 | 1.0000 | 0.6667 | 0.8000 | 0.0000 | 5/5 |
+| **Autoencoder** | **mean + 3σ = 0.0182547** | **10** | **0** | **174** | **5** | **1.0000** | **0.6667** | **0.8000** | **0.0000** | **5/5** |
+| Autoencoder | p95 = 0.0022368 | 10 | 15 | 159 | 5 | 0.4000 | 0.6667 | 0.5000 | 0.0862 | 5/5 |
+| Autoencoder | p99 = 0.0312195 | 10 | 0 | 174 | 5 | 1.0000 | 0.6667 | 0.8000 | 0.0000 | 5/5 |
 | One-Class SVM | mean + 3σ | 10 | 0 | 174 | 5 | 1.0000 | 0.6667 | 0.8000 | 0.0000 | 5/5 |
+| One-Class SVM | p95 | 10 | 5 | 169 | 5 | 0.6667 | 0.6667 | 0.6667 | 0.0287 | 5/5 |
 | Isolation Forest | mean + 3σ | 0 | 0 | 174 | 15 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0/5 |
+| Isolation Forest | p95 | 6 | 16 | 158 | 9 | 0.2727 | 0.4000 | 0.3243 | 0.0920 | 3/5 |
 
-- **Curves (autoencoder):** average precision 0.7078, ROC AUC 0.7973
-  (`person3_ml/results/pr_roc_curves.png`).
+- **Curves:** autoencoder AP 0.7218, ROC AUC 0.8410
+  (`person3_ml/results/pr_roc_curves.png`); One-Class SVM AP 0.6922, AUC 0.7008;
+  Isolation Forest AP 0.1665, AUC 0.7142.
 - **Windows flagged per attack:** recon 2/2, drop_exec 2/2, outbound_conn 2/7,
   ns_escape 2/2, spawn_storm 2/2. Most outbound_conn windows are a hung
   connection that looks idle.
-- **Reconstruction error:** attack median 16.84 (max 3396.07); normal median
-  0.000215 (max 0.0138).
-- **Detection delay:** recon 0.76 s, drop_exec 1.01 s, outbound_conn 0.53 s,
-  ns_escape 0.97 s, spawn_storm 0.66 s. Mean about 0.79 s, max 1.01 s.
-- **Training:** 100 epochs; final training loss 0.00150763, validation loss
-  0.00125739.
-- **Scoring time:** median 0.144 ms per window (Apple Silicon laptop).
-- **One-Class SVM matches the autoencoder** on this data, so the paper should
-  not claim the autoencoder beats the baselines.
-- **Pair-selection check:** the pair columns chosen with help from attack data
-  (see Team decisions) were zeroed and the eval re-scored. Result: still 5/5
-  attacks, TP 10, FP 0. Detection does not depend on them.
+- **Reconstruction error:** attack median 32.13 (max 6705.82); normal median
+  0.000154 (max 0.00734). Lowest window with attack calls 28.47, about
+  3,879× the highest normal window.
+- **Detection delay:** unchanged: recon 0.76 s, drop_exec 1.01 s,
+  outbound_conn 0.53 s, ns_escape 0.97 s, spawn_storm 0.66 s. Mean 0.784 s,
+  max 1.006 s.
+- **Training:** 100 epochs; final training loss 0.00112471, validation loss
+  0.00125043.
+- **Scoring time:** median 0.134 ms per window (Apple Silicon laptop).
+- **One-Class SVM still matches the autoencoder** at mean + 3σ, so the paper
+  should not claim the autoencoder beats the baselines.
+- **Pair-selection check** is now moot: the attack-informed pair columns are
+  not model inputs.
+
+**Superseded (74-feature model, 17 Oct):** TP 10 / FP 1, precision 0.909,
+F1 0.769, FPR 0.006, τ 0.0138062, AP 0.708, AUC 0.797, separation ~1,076×.
+Kept in `person3_ml/models_74/` and `person3_ml/results_74/`; reproduce with
+`SYSCALL_MODELS_DIR=person3_ml/models_74`.
 
 Reproduce with `python3 -m person3_ml.evaluate data/eval.csv data/attack_log.csv`
 and `python3 -m person3_ml.baselines data/normal.csv data/eval.csv data/attack_log.csv`.
+Both accept several `eval_csv attack_log` pairs and report pooled and
+per-capture results.
 
 ---
 
@@ -196,6 +221,7 @@ and `python3 -m person3_ml.baselines data/normal.csv data/eval.csv data/attack_l
 
 | Item | Priority |
 |---|---|
+| Evaluate the 3 new captures (4 extra attacks) once they land: `evaluate` and `baselines` with all four `eval_csv attack_log` pairs | 🔴 For the paper |
 | Rename placeholder columns (`pair_37_count` → readable) | ⚪ Future work |
 
 ---

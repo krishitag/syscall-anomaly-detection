@@ -1,13 +1,13 @@
 {
-    "threshold": 0.013806177303195,
+    "threshold": 0.01825469546020031,
     "rule": "mean + 3 x std of validation errors",
     "description": "Threshold calculated from normal validation reconstruction errors (time-based split).",
     "alternatives": {
-        "p95": 0.0032245491165667772,
-        "p99": 0.025889042764902115,
-        "max": 0.03404182195663452
+        "p95": 0.002236798172816634,
+        "p99": 0.03121945634484291,
+        "max": 0.050212662667036057
     },
-    "final_train_loss": 0.0015076300303418812,
-    "final_validation_loss": 0.0012573875719681382,
+    "final_train_loss": 0.0011247129350171745,
+    "final_validation_loss": 0.0012504326878115535,
     "epochs": 100
 }

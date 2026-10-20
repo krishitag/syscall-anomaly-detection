@@ -14,6 +14,10 @@ validation period are dropped.
 
 The threshold is mean + 3 x std of validation reconstruction error.  The
 95th and 99th percentiles are saved alongside it for reference.
+
+The model input is a subset of the 74 columns, chosen from the normal
+training windows only (``preprocessing.select_feature_columns``) and saved
+to features.json next to the model.
 """
 
 from __future__ import annotations
@@ -32,7 +36,11 @@ from torch.utils.data import DataLoader, TensorDataset
 from member2.pipeline import prepare_aggregated_csv
 
 from .autoencoder import SyscallAutoencoder
-from .preprocessing import FeatureScaler
+from .preprocessing import (
+    FeatureScaler,
+    column_indices,
+    select_feature_columns,
+)
 
 
 # ---------------------------------------------------------
@@ -121,6 +129,7 @@ def train_model(
 ) -> tuple[
     SyscallAutoencoder,
     FeatureScaler,
+    list[str],
     np.ndarray,
     np.ndarray,
     np.ndarray,
@@ -142,10 +151,24 @@ def train_model(
     print(f"Validation windows  : {len(X_validation)}")
 
     # -----------------------------------------------------
+    # Choose model input columns from training data ONLY
+    # -----------------------------------------------------
+
+    feature_columns = select_feature_columns(X_train)
+    selected = column_indices(feature_columns)
+
+    X_train = X_train[:, selected]
+    X_validation = X_validation[:, selected]
+
+    print()
+    print(f"Model features      : {len(feature_columns)} of 74")
+    print(f"  {', '.join(feature_columns)}")
+
+    # -----------------------------------------------------
     # Fit scaler ONLY on training data
     # -----------------------------------------------------
 
-    scaler = FeatureScaler.create()
+    scaler = FeatureScaler.create(len(feature_columns))
 
     X_train_scaled = scaler.fit_transform(X_train)
     X_validation_scaled = scaler.transform(X_validation)
@@ -177,7 +200,7 @@ def train_model(
     # -----------------------------------------------------
 
     model = SyscallAutoencoder(
-        input_dim=74,
+        input_dim=len(feature_columns),
         latent_dim=8,
     )
 
@@ -279,6 +302,7 @@ def train_model(
     return (
         model,
         scaler,
+        feature_columns,
         np.asarray(train_losses),
         np.asarray(validation_losses),
         validation_errors,
@@ -315,6 +339,7 @@ def threshold_summary(validation_errors: np.ndarray) -> dict:
 def save_artifacts(
     model: SyscallAutoencoder,
     scaler: FeatureScaler,
+    feature_columns: list[str],
     train_losses: np.ndarray,
     validation_losses: np.ndarray,
     validation_errors: np.ndarray,
@@ -344,6 +369,24 @@ def save_artifacts(
         scaler.scaler,
         MODELS_DIR / "scaler.joblib",
     )
+
+    with open(
+        MODELS_DIR / "features.json",
+        "w",
+        encoding="utf-8",
+    ) as file:
+
+        json.dump(
+            {
+                "columns": feature_columns,
+                "rule": (
+                    "all 20 syscall-family counts, pair columns non-zero "
+                    "in normal training windows, stat_04"
+                ),
+            },
+            file,
+            indent=4,
+        )
 
     with open(
         MODELS_DIR / "threshold.json",
@@ -450,6 +493,7 @@ def main() -> None:
     (
         model,
         scaler,
+        feature_columns,
         train_losses,
         validation_losses,
         validation_errors,
@@ -462,6 +506,7 @@ def main() -> None:
     summary = save_artifacts(
         model,
         scaler,
+        feature_columns,
         train_losses,
         validation_losses,
         validation_errors,
