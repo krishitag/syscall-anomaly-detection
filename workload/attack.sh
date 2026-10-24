@@ -25,4 +25,10 @@ run drop_exec     docker exec "$C" sh -c 'cp /bin/ls /tmp/.x && chmod +x /tmp/.x
 run outbound_conn docker exec "$C" bash -c 'exec 3<>/dev/tcp/172.17.0.1/4444'
 run ns_escape     docker exec "$C" sh -c 'unshare --user --map-root-user true'
 run spawn_storm   docker exec "$C" sh -c 'for i in $(seq 50); do sh -c true; done'
+
+# --- Added for Review 3: 4 more post-exploitation behaviours (same run() = timeout 5) ---
+run cred_harvest  docker exec "$C" sh -c 'cat /etc/shadow; cat /etc/passwd; env'
+run html_drop     docker exec "$C" sh -c 'echo pwned > /usr/share/nginx/html/.x && rm /usr/share/nginx/html/.x'
+run cpu_burn      docker exec "$C" sh -c 'end=$(( $(date +%s) + 3 )); while [ "$(date +%s)" -lt "$end" ]; do :; done'
+run port_scan     docker exec "$C" bash -c 'for p in 21 22 23 25 80 110 139 443 445 3306; do (exec 3<>/dev/tcp/172.18.0.1/$p) 2>/dev/null && exec 3>&-; done'
 echo "done. log: $LOG"
